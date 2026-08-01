@@ -506,6 +506,211 @@ if ($action === 'delete_indicateur') {
 }
 
 // ============================================================
+// ACTION 8 : MODIFIER LES ACCÈS (LOGIN ET MOT DE PASSE)
+// ============================================================
+if ($action === 'update_credentials') {
+    $userId = trim($input['user_id'] ?? '');
+    $newLogin = trim($input['login'] ?? '');
+    $newPassword = trim($input['password'] ?? '');
+
+    if (empty($userId)) {
+        echo json_encode(['error' => 'Identifiant utilisateur manquant.']);
+        exit;
+    }
+
+    if (empty($newLogin)) {
+        echo json_encode(['error' => 'Le login ne peut pas être vide.']);
+        exit;
+    }
+
+    try {
+        // Vérifier que l'utilisateur existe
+        $stmtCheck = $pdo->prepare("SELECT utilisateur_id FROM utilisateurs WHERE utilisateur_id = :id LIMIT 1");
+        $stmtCheck->execute([':id' => $userId]);
+        if (!$stmtCheck->fetch()) {
+            echo json_encode(['error' => 'Utilisateur introuvable.']);
+            exit;
+        }
+
+        // Vérifier que le nouveau login n'est pas déjà utilisé par un autre utilisateur
+        $stmtCheckLogin = $pdo->prepare("SELECT utilisateur_id FROM utilisateurs WHERE login = :login AND utilisateur_id != :id LIMIT 1");
+        $stmtCheckLogin->execute([':login' => $newLogin, ':id' => $userId]);
+        if ($stmtCheckLogin->fetch()) {
+            echo json_encode(['error' => 'Ce login est déjà utilisé par un autre utilisateur.']);
+            exit;
+        }
+
+        // Construire la requête de mise à jour
+        if (!empty($newPassword)) {
+            // Modifier login ET mot de passe
+            $stmt = $pdo->prepare("
+                UPDATE utilisateurs 
+                SET login = :login, mdp = :mdp 
+                WHERE utilisateur_id = :id
+            ");
+            $stmt->execute([
+                ':login' => $newLogin,
+                ':mdp' => $newPassword,
+                ':id' => $userId
+            ]);
+        } else {
+            // Modifier uniquement le login
+            $stmt = $pdo->prepare("
+                UPDATE utilisateurs 
+                SET login = :login 
+                WHERE utilisateur_id = :id
+            ");
+            $stmt->execute([
+                ':login' => $newLogin,
+                ':id' => $userId
+            ]);
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Accès mis à jour avec succès.',
+            'user' => [
+                'login' => $newLogin
+            ]
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Erreur serveur : ' . $e->getMessage()]);
+    }
+    exit;
+}
+
+
+
+// ============================================================
+// ACTION 9 : SURVEILLANCE DES BASES DE DONNÉES
+// ============================================================
+if ($action === 'monitoring') {
+    $userId = trim($input['user_id'] ?? '');
+    $baseId = trim($input['base_id'] ?? '');
+    $monitoringAction = trim($input['monitoring_action'] ?? 'stats');
+
+    if (empty($userId) || empty($baseId)) {
+        echo json_encode(['error' => 'Paramètres manquants.']);
+        exit;
+    }
+
+    try {
+        // Vérifier les droits d'accès
+        $stmtAccess = $pdo->prepare("
+            SELECT 
+                b.hote,
+                b.nom_base,
+                b.utilisateur AS db_user,
+                b.mot_passe AS db_pass
+            FROM user_bases ub
+            INNER JOIN bases b ON ub.base_id = b.base_id
+            WHERE ub.utilisateur_id = :user_id
+            AND ub.base_id = :base_id
+            AND ub.statut = 'actif'
+            LIMIT 1
+        ");
+        $stmtAccess->execute([':user_id' => $userId, ':base_id' => $baseId]);
+        $access = $stmtAccess->fetch();
+
+        if (!$access) {
+            echo json_encode(['error' => 'Accès refusé à cette base de données.']);
+            exit;
+        }
+
+        // Connexion à la base cible
+        $targetDsn = "mysql:host={$access['hote']};dbname={$access['nom_base']};charset=utf8mb4";
+        $targetPdo = new PDO($targetDsn, $access['db_user'], $access['db_pass'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC
+        ]);
+
+        // Récupérer les statistiques
+        $stats = [
+            'connections' => 0,
+            'tables' => [],
+            'total_columns' => 0,
+            'total_rows' => 0,
+            'total_size' => '0 Mo',
+            'alerts' => []
+        ];
+
+        // 1. Récupérer les connexions actives (si possible)
+        try {
+            $stmt = $targetPdo->query("SHOW STATUS LIKE 'Threads_connected'");
+            $row = $stmt->fetch();
+            $stats['connections'] = $row ? intval($row['Value']) : 0;
+        } catch (Exception $e) {
+            $stats['connections'] = 0;
+        }
+
+        // 2. Récupérer la liste des tables et leurs informations
+        $stmtTables = $targetPdo->query("SHOW TABLE STATUS");
+        $tables = $stmtTables->fetchAll();
+        $totalRows = 0;
+        $totalSizeBytes = 0;
+
+        foreach ($tables as $table) {
+            $tableName = $table['Name'];
+            $rows = intval($table['Rows'] ?? 0);
+            $dataLength = intval($table['Data_length'] ?? 0);
+            $indexLength = intval($table['Index_length'] ?? 0);
+            $sizeBytes = $dataLength + $indexLength;
+            $sizeMo = round($sizeBytes / (1024 * 1024), 2);
+
+            // Vérifier les colonnes
+            $stmtCols = $targetPdo->query("SELECT COUNT(*) as cols FROM information_schema.columns WHERE table_schema = '{$access['nom_base']}' AND table_name = '$tableName'");
+            $cols = $stmtCols->fetch();
+            $colCount = intval($cols['cols'] ?? 0);
+
+            $stats['tables'][] = [
+                'name' => $tableName,
+                'rows' => $rows,
+                'columns' => $colCount,
+                'size' => $sizeMo . ' Mo'
+            ];
+
+            $totalRows += $rows;
+            $totalSizeBytes += $sizeBytes;
+
+            // Alerte si la table dépasse 100 Mo
+            if ($sizeMo > 100) {
+                $stats['alerts'][] = [
+                    'table' => $tableName,
+                    'message' => "Taille de {$sizeMo} Mo (dépasse 100 Mo)"
+                ];
+            }
+        }
+
+        // Alerte si la base totale dépasse 1 Go
+        $totalSizeMo = round($totalSizeBytes / (1024 * 1024), 2);
+        if ($totalSizeMo > 1024) {
+            $stats['alerts'][] = [
+                'table' => 'Base complète',
+                'message' => "Taille totale de {$totalSizeMo} Mo (dépasse 1 Go)"
+            ];
+        }
+
+        $stats['total_rows'] = $totalRows;
+        $stats['total_size'] = $totalSizeMo . ' Mo';
+        
+        // Compter le total des colonnes
+        $stmtTotalCols = $targetPdo->query("SELECT COUNT(*) as total FROM information_schema.columns WHERE table_schema = '{$access['nom_base']}'");
+        $totalCols = $stmtTotalCols->fetch();
+        $stats['total_columns'] = intval($totalCols['total'] ?? 0);
+
+        echo json_encode([
+            'success' => true,
+            ...$stats
+        ]);
+
+    } catch (PDOException $e) {
+        echo json_encode(['error' => 'Erreur de connexion à la base cible : ' . $e->getMessage()]);
+    }
+    exit;
+}
+
+// ============================================================
 // ACTION INCONNUE
 // ============================================================
 echo json_encode(['error' => 'Action inconnue. Actions disponibles : login, get_bases, ask_ia']);
