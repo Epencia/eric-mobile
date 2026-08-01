@@ -42,6 +42,30 @@ export default function App() {
   const [resetMessage, setResetMessage] = useState('');
   const resetEmailRef = useRef(null);
 
+  // État pour le modal de modification des accès
+  const [editCredentialsModalVisible, setEditCredentialsModalVisible] = useState(false);
+  const [newLogin, setNewLogin] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingCredentials, setIsUpdatingCredentials] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // États pour la surveillance des bases
+  const [isMonitoringMode, setIsMonitoringMode] = useState(false);
+  const [monitoringData, setMonitoringData] = useState([]);
+  const [isMonitoring, setIsMonitoring] = useState(false);
+  const [monitoringInterval, setMonitoringInterval] = useState(null);
+  const [monitoringStatus, setMonitoringStatus] = useState('arrêté'); // 'arrêté', 'en cours', 'erreur'
+  const [dbStats, setDbStats] = useState({
+    connections: 0,
+    tables: [],
+    totalColumns: 0,
+    totalRows: 0,
+    totalSize: '0 Mo',
+    alerts: []
+  });
+
   const [bases, setBases] = useState([]);
   const [selectedBase, setSelectedBase] = useState(null);
   const [isLoadingBases, setIsLoadingBases] = useState(false);
@@ -71,15 +95,12 @@ export default function App() {
   const [tempMin, setTempMin] = useState('');
   const [tempMax, setTempMax] = useState('');
 
-  const [isPresentationMode, setIsPresentationMode] = useState(false);
-  const [presentationIndex, setPresentationIndex] = useState(0);
-
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [recognizing, setRecognizing] = useState(false);
 
   // ================================================================
-  // FONCTIONS VOIX (inchangées)
+  // FONCTIONS VOIX
   // ================================================================
   const speak = (text) => {
     if (!text || !autoSpeak) return;
@@ -124,14 +145,13 @@ export default function App() {
   });
 
   const toggleVoiceRecognition = async () => {
-    // Si le module n'est pas disponible (Expo Go)
-  if (!ExpoSpeechRecognitionModule) {
-    Alert.alert(
-      "Non disponible",
-      "La reconnaissance vocale nécessite l'application installée et non la simulation."
-    );
-    return;
-  }
+    if (!ExpoSpeechRecognitionModule) {
+      Alert.alert(
+        "Non disponible",
+        "La reconnaissance vocale nécessite l'application installée et non la simulation."
+      );
+      return;
+    }
     if (isSpeaking) stopSpeaking();
     if (recognizing) {
       try {
@@ -163,7 +183,189 @@ export default function App() {
   };
 
   // ================================================================
-  // AUTRES FONCTIONS (inchangées)
+  // FONCTIONS DE SURVEILLANCE DES BASES DE DONNÉES
+  // ================================================================
+  const toggleMonitoringMode = async () => {
+    if (isSpeaking) stopSpeaking();
+    if (isMonitoringMode) {
+      stopMonitoring();
+      setIsMonitoringMode(false);
+      setMonitoringData([]);
+    } else {
+      setIsMonitoringMode(true);
+      await startMonitoring();
+    }
+  };
+
+  const startMonitoring = async () => {
+    if (!selectedBase || !user) {
+      Alert.alert('Erreur', 'Aucune base sélectionnée.');
+      return;
+    }
+
+    setMonitoringStatus('en cours');
+    setIsMonitoring(true);
+    
+    // Exécuter immédiatement une surveillance
+    await fetchDatabaseStats();
+
+    // Mettre en place un intervalle de surveillance (toutes les 30 secondes)
+    const interval = setInterval(async () => {
+      await fetchDatabaseStats();
+    }, 30000);
+    
+    setMonitoringInterval(interval);
+    speak(`Surveillance de la base ${selectedBase.nom_base} activée`);
+  };
+
+  const stopMonitoring = () => {
+    if (monitoringInterval) {
+      clearInterval(monitoringInterval);
+      setMonitoringInterval(null);
+    }
+    setIsMonitoring(false);
+    setMonitoringStatus('arrêté');
+    speak('Surveillance arrêtée');
+  };
+
+  const fetchDatabaseStats = async () => {
+    if (!selectedBase || !user) return;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'monitoring',
+          user_id: user.id,
+          base_id: selectedBase.base_id,
+          monitoring_action: 'stats'
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        const newStats = {
+          connections: data.connections || 0,
+          tables: data.tables || [],
+          totalColumns: data.total_columns || 0,
+          totalRows: data.total_rows || 0,
+          totalSize: data.total_size || '0 Mo',
+          alerts: data.alerts || []
+        };
+        setDbStats(newStats);
+        setMonitoringData(prev => [newStats, ...prev].slice(0, 50));
+        
+        // Ajouter une alerte si la taille dépasse 100 Mo
+        if (newStats.alerts && newStats.alerts.length > 0) {
+          newStats.alerts.forEach(alert => {
+            const alertMessage = `🚨 ${alert.table}: ${alert.message}`;
+            setMessages(prev => [...prev, { 
+              role: 'assistant', 
+              content: alertMessage,
+              isAlert: true 
+            }]);
+            if (autoSpeak) {
+              speak(`Alerte ${alert.table}: ${alert.message}`);
+            }
+          });
+        }
+        
+        // Ajouter un message de statut
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `📊 Statistiques de ${selectedBase.nom_base}: ${newStats.tables.length} tables, ${newStats.totalRows} enregistrements, taille ${newStats.totalSize}`
+        }]);
+      } else {
+        setMonitoringStatus('erreur');
+        console.error('Erreur monitoring:', data.error);
+      }
+    } catch (e) {
+      setMonitoringStatus('erreur');
+      console.error('Erreur fetch monitoring:', e);
+    }
+  };
+
+  // ================================================================
+  // FONCTIONS DE MODIFICATION DES ACCÈS
+  // ================================================================
+  const openEditCredentialsModal = () => {
+    if (isSpeaking) stopSpeaking();
+    setNewLogin(user?.login || '');
+    setNewPassword('');
+    setConfirmPassword('');
+    setEditCredentialsModalVisible(true);
+  };
+
+  const handleUpdateCredentials = async () => {
+    const login = newLogin.trim();
+    const password = newPassword.trim();
+    const confirm = confirmPassword.trim();
+
+    if (!login) {
+      Alert.alert('Erreur', 'Le login est obligatoire.');
+      return;
+    }
+
+    if (password && password !== confirm) {
+      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setIsUpdatingCredentials(true);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_credentials',
+          user_id: user.id,
+          login: login,
+          password: password || undefined
+        })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setUser({ ...user, login: login });
+        Alert.alert('Succès', 'Vos accès ont été modifiés avec succès.');
+        setEditCredentialsModalVisible(false);
+        speak('Vos accès ont été modifiés.');
+      } else {
+        Alert.alert('Erreur', data.error || 'Impossible de modifier les accès.');
+      }
+    } catch (e) {
+      Alert.alert('Erreur réseau', 'Impossible de communiquer avec le serveur.');
+    } finally {
+      setIsUpdatingCredentials(false);
+    }
+  };
+
+  // ================================================================
+  // FONCTIONS RENDER MESSAGE
+  // ================================================================
+  const renderMessage = ({ item, index }) => {
+    if (item.role === 'user') {
+      return (
+        <View style={styles.userRow}>
+          <View style={styles.userBubble}>
+            <Text style={styles.userText} selectable>{item.content}</Text>
+            <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(index, item.content)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.editButtonText}>✏️ Modifier</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+    return <AiMessage 
+      item={item} 
+      onSaveIndicator={(sql) => { setNewIndicatorSql(sql); setSaveIndicatorModalVisible(true); }}
+      onSpeak={speak}
+    />;
+  };
+
+  // ================================================================
+  // AUTRES FONCTIONS
   // ================================================================
   useEffect(() => {
     if (flatListRef.current) {
@@ -204,32 +406,6 @@ export default function App() {
 
   const showToast = (title, message, type = 'info') => {
     Alert.alert(title, message);
-  };
-
-  const togglePresentationMode = () => {
-    if (isSpeaking) stopSpeaking();
-    if (isPresentationMode) {
-      setIsPresentationMode(false);
-      setPresentationIndex(0);
-    } else {
-      setIsPresentationMode(true);
-      setPresentationIndex(0);
-      showToast('📺 Mode Présentation', 'Utilisez les flèches pour naviguer', 'info');
-    }
-  };
-
-  const nextPresentationSlide = () => {
-    if (indicators.length === 0) return;
-    const nextIndex = (presentationIndex + 1) % indicators.length;
-    setPresentationIndex(nextIndex);
-    handleExecuteIndicator(indicators[nextIndex]);
-  };
-
-  const prevPresentationSlide = () => {
-    if (indicators.length === 0) return;
-    const prevIndex = presentationIndex === 0 ? indicators.length - 1 : presentationIndex - 1;
-    setPresentationIndex(prevIndex);
-    handleExecuteIndicator(indicators[prevIndex]);
   };
 
   const checkAlerts = (data, indicatorName, indicatorId) => {
@@ -371,9 +547,14 @@ export default function App() {
 
   const selectBase = async (base) => {
     if (isSpeaking) stopSpeaking();
+    if (isMonitoringMode) {
+      stopMonitoring();
+      setIsMonitoringMode(false);
+    }
     setSelectedBase(base);
     setMessages([]); setEditingIndex(null); setInputText(''); setSearchQuery('');
-    if (isPresentationMode) togglePresentationMode();
+    setDbStats({ connections: 0, tables: [], totalColumns: 0, totalRows: 0, totalSize: '0 Mo', alerts: [] });
+    setMonitoringData([]);
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
@@ -390,6 +571,10 @@ export default function App() {
 
   const handleLogout = () => {
     stopSpeaking();
+    if (isMonitoringMode) {
+      stopMonitoring();
+      setIsMonitoringMode(false);
+    }
     Alert.alert('Déconnexion', 'Voulez-vous vraiment vous déconnecter ?', [
       { text: 'Annuler', style: 'cancel' },
       {
@@ -397,7 +582,7 @@ export default function App() {
         onPress: () => {
           setIsLoggedIn(false); setUser(null); setBases([]); setSelectedBase(null);
           setMessages([]); setLoginInput(''); setMdpInput(''); setEditingIndex(null);
-          setIndicators([]); if (isPresentationMode) togglePresentationMode();
+          setIndicators([]);
         }
       }
     ]);
@@ -455,9 +640,7 @@ export default function App() {
   const handleExecuteIndicator = async (indicateur) => {
     if (isSpeaking) stopSpeaking();
     setIsLoading(true);
-    if (!isPresentationMode) {
-      setMessages(prev => [...prev, { role: 'user', content: `📊 Exécution : ${indicateur.nom}` }]);
-    }
+    setMessages(prev => [...prev, { role: 'user', content: `📊 Exécution : ${indicateur.nom}` }]);
     setIsSidebarVisible(false);
     try {
       const res = await fetch(API_URL, {
@@ -568,7 +751,7 @@ export default function App() {
   const cancelEdit = () => { setInputText(''); setEditingIndex(null); };
 
   // ================================================================
-  // MODALS & COMPOSANTS (inchangés sauf renderMessage)
+  // MODALS
   // ================================================================
   const renderForgotModal = () => (
     <Modal visible={forgotModalVisible} transparent animationType="fade" onRequestClose={closeForgotModal}>
@@ -601,6 +784,45 @@ export default function App() {
           )}
           <TouchableOpacity style={styles.modalCloseButton} onPress={closeForgotModal}>
             <Text style={styles.modalCloseText}>{resetSuccess ? 'Fermer' : 'Annuler'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderEditCredentialsModal = () => (
+    <Modal visible={editCredentialsModalVisible} transparent animationType="fade" onRequestClose={() => setEditCredentialsModalVisible(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContainer, { maxWidth: 400 }]}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalIconWrapper}><Text style={styles.modalIcon}>🔐</Text></View>
+            <Text style={styles.modalTitle}>Modifier mes accès</Text>
+            <Text style={styles.modalSubtitle}>Modifiez votre login et/ou mot de passe</Text>
+          </View>
+          <View style={styles.modalBody}>
+            <View style={styles.resetInputWrapper}>
+              <Text style={styles.resetInputIcon}>👤</Text>
+              <TextInput style={styles.resetInput} placeholder="Nouveau login *" placeholderTextColor="#94a3b8" value={newLogin} onChangeText={setNewLogin} autoCapitalize="none" />
+            </View>
+            <View style={styles.resetInputWrapper}>
+              <Text style={styles.resetInputIcon}>🔒</Text>
+              <TextInput style={[styles.resetInput, { flex: 1 }]} placeholder="Nouveau mot de passe" placeholderTextColor="#94a3b8" value={newPassword} onChangeText={setNewPassword} secureTextEntry={!showNewPassword} />
+              <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} style={styles.eyeButton}><Text style={styles.eyeText}>{showNewPassword ? '🙈' : '👁️'}</Text></TouchableOpacity>
+            </View>
+            <View style={styles.resetInputWrapper}>
+              <Text style={styles.resetInputIcon}>✓</Text>
+              <TextInput style={[styles.resetInput, { flex: 1 }]} placeholder="Confirmer le mot de passe" placeholderTextColor="#94a3b8" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showConfirmPassword} />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeButton}><Text style={styles.eyeText}>{showConfirmPassword ? '🙈' : '👁️'}</Text></TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 11, color: '#94a3b8', marginBottom: 16, textAlign: 'center' }}>
+              Laissez le mot de passe vide pour le conserver inchangé.
+            </Text>
+            <TouchableOpacity style={[styles.resetButton, isUpdatingCredentials && { opacity: 0.6 }]} onPress={handleUpdateCredentials} disabled={isUpdatingCredentials}>
+              {isUpdatingCredentials ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.resetButtonText}>💾 Mettre à jour</Text>}
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.modalCloseButton} onPress={() => setEditCredentialsModalVisible(false)}>
+            <Text style={styles.modalCloseText}>Annuler</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -753,26 +975,6 @@ export default function App() {
     </Modal>
   );
 
-  const renderMessage = ({ item, index }) => {
-    if (item.role === 'user') {
-      return (
-        <View style={styles.userRow}>
-          <View style={styles.userBubble}>
-            <Text style={styles.userText} selectable>{item.content}</Text>
-            <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(index, item.content)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.editButtonText}>✏️ Modifier</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-    return <AiMessage 
-      item={item} 
-      onSaveIndicator={(sql) => { setNewIndicatorSql(sql); setSaveIndicatorModalVisible(true); }}
-      onSpeak={speak}
-    />;
-  };
-
   // ================================================================
   // RENDU PRINCIPAL
   // ================================================================
@@ -819,7 +1021,7 @@ export default function App() {
             <TouchableOpacity onPress={() => { if(isSpeaking) { stopSpeaking(); } else { setAutoSpeak(!autoSpeak); if(!autoSpeak) speak("Voix activée"); } }} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: autoSpeak ? '#ede9fe' : '#f1f5f9' }]}>
               <Text style={styles.logoutTextSmall}>{autoSpeak ? '🔊' : '🔇'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}><Text style={styles.logoutText}>Déconnexion</Text></TouchableOpacity>
+             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}><Text style={styles.logoutText}>🔓</Text></TouchableOpacity>
           </View>
         </View>
         <View style={styles.basesContainer}>
@@ -863,175 +1065,233 @@ export default function App() {
     );
   }
 
-  return (
-    <SafeAreaView style={[styles.container, isPresentationMode && { backgroundColor: '#000' }]} edges={["top", "bottom"]}>
-      {!isPresentationMode ? (
-        <>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => { setSelectedBase(null); setMessages([]); setIndicators([]); if (isPresentationMode) togglePresentationMode(); }} style={styles.backButton}>
-              <Text style={styles.backText}>← Bases</Text>
+  // Mode Surveillance des bases de données
+  if (isMonitoringMode) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#0a0a1a' }]} edges={["top", "bottom"]}>
+        <View style={[styles.header, { backgroundColor: '#0a0a1a', borderBottomColor: 'rgba(255,255,255,0.1)' }]}>
+          <TouchableOpacity onPress={() => { toggleMonitoringMode(); setSelectedBase(null); setMessages([]); setIndicators([]); }} style={styles.backButton}>
+            <Text style={styles.backText}>← Bases</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={[styles.logoutButtonSmall, { marginRight: 8, backgroundColor: isMonitoring ? '#dcfce7' : '#fef2f2' }]}>
+              <Text style={{ fontSize: 16 }}>{isMonitoring ? '🟢' : '🔴'}</Text>
+            </View>
+            <TouchableOpacity onPress={toggleMonitoringMode} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#fef2f2' }]}>
+              <Text style={styles.logoutTextSmall}>✕</Text>
             </TouchableOpacity>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => { if(isSpeaking) { stopSpeaking(); } else { setAutoSpeak(!autoSpeak); if(!autoSpeak) speak("Voix activée"); } }} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: autoSpeak ? '#ede9fe' : '#f1f5f9' }]}>
-                <Text style={styles.logoutTextSmall}>{autoSpeak ? '🔊' : '🔇'}</Text>
-              </TouchableOpacity>
-              {isSpeaking && (
-                <TouchableOpacity onPress={stopSpeaking} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#fef2f2' }]}>
-                  <Text style={styles.logoutTextSmall}>⏹</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={togglePresentationMode} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#f0f9ff' }]}>
-                <Text style={styles.logoutTextSmall}>📺</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setAlertModalVisible(true)} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#fef3c7' }]}>
-                <Text style={styles.logoutTextSmall}>🔔</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setIsSidebarVisible(true)} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#f0f9ff' }]}>
-                <Text style={styles.logoutTextSmall}>📊</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleLogout} style={styles.logoutButtonSmall}>
-                <Text style={styles.logoutTextSmall}>🔓</Text>
-              </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.monitoringContainer}>
+          <View style={styles.monitoringHeader}>
+            <Text style={styles.monitoringTitle}>🗄️ Surveillance des bases</Text>
+            <Text style={styles.monitoringSubtitle}>
+              {selectedBase?.nom_base} • {isMonitoring ? 'Surveillance active' : 'Surveillance arrêtée'}
+            </Text>
+            <Text style={[styles.monitoringStatus, { color: isMonitoring ? '#22c55e' : '#ef4444' }]}>
+              {isMonitoring ? '🟢 En cours' : '⏸ Arrêtée'}
+            </Text>
+          </View>
+
+          <View style={styles.monitoringControls}>
+            <TouchableOpacity 
+              style={[styles.monitoringButton, isMonitoring ? styles.monitoringButtonStop : styles.monitoringButtonStart]}
+              onPress={() => {
+                if (isMonitoring) {
+                  stopMonitoring();
+                } else {
+                  startMonitoring();
+                }
+              }}
+            >
+              <Text style={styles.monitoringButtonText}>
+                {isMonitoring ? '⏹ Arrêter' : '▶️ Démarrer'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.monitoringButton, { backgroundColor: '#6c63ff' }]}
+              onPress={fetchDatabaseStats}
+            >
+              <Text style={styles.monitoringButtonText}>🔄 Rafraîchir</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Statistiques de la base */}
+          <View style={styles.monitoringStatsGrid}>
+            <View style={styles.monitoringStatCard}>
+              <Text style={styles.monitoringStatLabel}>🔌 Connexions</Text>
+              <Text style={styles.monitoringStatValue}>{dbStats.connections}</Text>
+            </View>
+            <View style={styles.monitoringStatCard}>
+              <Text style={styles.monitoringStatLabel}>📋 Tables</Text>
+              <Text style={styles.monitoringStatValue}>{dbStats.tables.length}</Text>
+            </View>
+            <View style={styles.monitoringStatCard}>
+              <Text style={styles.monitoringStatLabel}>📝 Colonnes</Text>
+              <Text style={styles.monitoringStatValue}>{dbStats.totalColumns}</Text>
+            </View>
+            <View style={styles.monitoringStatCard}>
+              <Text style={styles.monitoringStatLabel}>📊 Enregistrements</Text>
+              <Text style={styles.monitoringStatValue}>{dbStats.totalRows.toLocaleString()}</Text>
+            </View>
+            <View style={[styles.monitoringStatCard, { gridColumn: 'span 2' }]}>
+              <Text style={styles.monitoringStatLabel}>💾 Taille totale</Text>
+              <Text style={[styles.monitoringStatValue, dbStats.totalSize && parseFloat(dbStats.totalSize) > 100 ? { color: '#ef4444' } : null]}>
+                {dbStats.totalSize}
+                {dbStats.totalSize && parseFloat(dbStats.totalSize) > 100 && ' ⚠️'}
+              </Text>
             </View>
           </View>
 
-          <KeyboardAvoidingView style={styles.chatArea} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}>
-            <FlatList ref={flatListRef} data={messages} keyExtractor={(_, i) => i.toString()} renderItem={renderMessage} contentContainerStyle={styles.listContent}
-              keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <View style={styles.welcome}>
-                  <View style={styles.welcomeIcon}><Text style={styles.welcomeIconText}>E</Text></View>
-                  <Text style={styles.welcomeTitle}>Bonjour, je suis Eric</Text>
-                  <Text style={styles.welcomeText}>Votre assistant IA connecté à votre base de données.{'\n'}Base : {selectedBase.nom_base}</Text>
-                  <View style={styles.welcomeTables}>
-                    <Text style={styles.welcomeTablesTitle}>Tables disponibles :</Text>
-                    {selectedBase.all_tables ? (
-                      <Text style={styles.welcomeTablesList}>🌐 Toutes les tables de la base "{selectedBase.nom_base}"</Text>
-                    ) : (
-                      <Text style={styles.welcomeTablesList}>{selectedBase.tables_list?.join(', ')}</Text>
-                    )}
+          {/* Alertes de taille */}
+          {dbStats.alerts && dbStats.alerts.length > 0 && (
+            <View style={styles.monitoringAlerts}>
+              <Text style={styles.monitoringAlertsTitle}>🚨 Alertes taille (>100 Mo)</Text>
+              {dbStats.alerts.map((alert, idx) => (
+                <View key={idx} style={[styles.monitoringAlertItem, { borderLeftColor: '#ef4444' }]}>
+                  <Text style={styles.monitoringAlertText}>
+                    📊 {alert.table}: {alert.message}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Liste des tables */}
+          <View style={styles.monitoringTables}>
+            <Text style={styles.monitoringTablesTitle}>📋 Détail des tables</Text>
+            <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator>
+              {dbStats.tables.map((table, idx) => (
+                <View key={idx} style={styles.monitoringTableItem}>
+                  <View style={styles.monitoringTableHeader}>
+                    <Text style={styles.monitoringTableName}>📊 {table.name}</Text>
+                    <Text style={styles.monitoringTableRows}>{table.rows?.toLocaleString() || 0} lignes</Text>
+                  </View>
+                  <View style={styles.monitoringTableDetails}>
+                    <Text style={styles.monitoringTableDetail}>Colonnes: {table.columns || 0}</Text>
+                    <Text style={[styles.monitoringTableDetail, table.size && parseFloat(table.size) > 100 ? { color: '#ef4444', fontWeight: 'bold' } : null]}>
+                      Taille: {table.size || '0 Mo'}
+                      {table.size && parseFloat(table.size) > 100 && ' ⚠️'}
+                    </Text>
                   </View>
                 </View>
-              }
-            />
-            {isLoading && (
-              <View style={styles.loadingRow}>
-                <View style={styles.aiIcon}><Text style={styles.aiIconText}>E</Text></View>
-                <ActivityIndicator color="#6c63ff" size="small" />
-                <Text style={styles.loadingText}>Eric traite votre demande...</Text>
-              </View>
-            )}
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.monitoringStatus}>
+            <Text style={styles.monitoringStatusText}>
+              {isMonitoring ? '🟢 Surveillance active - Mise à jour toutes les 30s' : '⏸ Surveillance en pause'}
+            </Text>
+            <Text style={[styles.monitoringStatusText, { fontSize: 11, color: '#64748b', marginTop: 4 }]}>
+              Dernière mise à jour: {new Date().toLocaleTimeString()}
+            </Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Mode Chat normal
+  return (
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => { setSelectedBase(null); setMessages([]); setIndicators([]); }} style={styles.backButton}>
+            <Text style={styles.backText}>← Bases</Text>
+          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => { if(isSpeaking) { stopSpeaking(); } else { setAutoSpeak(!autoSpeak); if(!autoSpeak) speak("Voix activée"); } }} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: autoSpeak ? '#ede9fe' : '#f1f5f9' }]}>
+              <Text style={styles.logoutTextSmall}>{autoSpeak ? '🔊' : '🔇'}</Text>
+            </TouchableOpacity>
             {isSpeaking && (
-              <View style={styles.speakingRow}>
-                <Text style={styles.speakingText}>🔊 Eric parle...</Text>
-                <TouchableOpacity onPress={stopSpeaking}><Text style={styles.stopText}>Arrêter</Text></TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={stopSpeaking} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#fef2f2' }]}>
+                <Text style={styles.logoutTextSmall}>⏹</Text>
+              </TouchableOpacity>
             )}
-            <View style={styles.inputArea}>
-              {editingIndex !== null && (
-                <View style={styles.editingBanner}>
-                  <Text style={styles.editingText}>✏️ Modification de la question</Text>
-                  <TouchableOpacity onPress={cancelEdit}><Text style={styles.cancelEditText}>✕ Annuler</Text></TouchableOpacity>
-                </View>
-              )}
-              <View style={styles.inputBar}>
-                <TextInput ref={inputRef} style={styles.input} placeholder="Posez votre question..." placeholderTextColor="#94a3b8" value={inputText} onChangeText={setInputText} multiline maxLength={1000} />
-                <TouchableOpacity onPress={toggleVoiceRecognition} style={[styles.voiceButton, recognizing && styles.voiceButtonActive]}>
-                  <Text style={[styles.voiceButtonText, recognizing && { color: '#fff' }]}>{recognizing ? '🎙️' : '🎤'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.sendButton, inputText.trim() && !isLoading ? styles.sendButtonActive : null]} onPress={handleSend} disabled={!inputText.trim() || isLoading}>
-                  <Text style={[styles.sendButtonText, inputText.trim() && !isLoading ? { color: '#fff' } : null]}>{editingIndex !== null ? '✓' : '➤'}</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.disclaimer}>🔒 Eric peut faire des erreurs. Vérifiez les informations importantes.</Text>
-            </View>
-          </KeyboardAvoidingView>
-        </>
-      ) : (
-        <View style={styles.presentationContainer}>
-          <View style={styles.presentationHeader}>
-            <Text style={styles.presentationTitle}>📺 Mode Présentation</Text>
-            <TouchableOpacity 
-              onPress={() => {
-                setIsPresentationMode(false);
-                setPresentationIndex(0);
-                if (isSpeaking) stopSpeaking();
-              }} 
-              style={styles.closePresentationButton}
-            >
-              <Text style={styles.closePresentationText}>✕ Fermer</Text>
+            
+            <TouchableOpacity onPress={() => setAlertModalVisible(true)} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#fef3c7' }]}>
+              <Text style={styles.logoutTextSmall}>🔔</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsSidebarVisible(true)} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#f0f9ff' }]}>
+              <Text style={styles.logoutTextSmall}>📊</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleMonitoringMode} style={[styles.logoutButtonSmall, { marginRight: 4, backgroundColor: '#f0f9ff' }]}>
+              <Text style={styles.logoutTextSmall}>🗄️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={openEditCredentialsModal} style={styles.logoutButtonSmall}>
+              <Text style={styles.logoutTextSmall}>👤</Text>
             </TouchableOpacity>
           </View>
-          
-          {indicators.length === 0 ? (
-            <View style={styles.presentationEmpty}>
-              <Text style={styles.presentationEmptyText}>Aucun indicateur disponible</Text>
-              <Text style={styles.presentationEmptySub}>Créez des indicateurs pour utiliser le mode présentation</Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.presentationNavigation}>
-                <TouchableOpacity onPress={prevPresentationSlide} style={styles.presentationNavButton}>
-                  <Text style={styles.presentationNavText}>◀</Text>
-                </TouchableOpacity>
-                <Text style={styles.presentationCounter}>
-                  {presentationIndex + 1} / {indicators.length}
-                </Text>
-                <TouchableOpacity onPress={nextPresentationSlide} style={styles.presentationNavButton}>
-                  <Text style={styles.presentationNavText}>▶</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.presentationContent}>
-                <Text style={styles.presentationIndicatorName}>
-                  {indicators[presentationIndex]?.nom || 'Aucun indicateur'}
-                </Text>
-                <Text style={styles.presentationIndicatorDesc}>
-                  {indicators[presentationIndex]?.description || ''}
-                </Text>
-              </View>
-
-              <FlatList
-                data={messages.slice(-5)}
-                keyExtractor={(_, i) => i.toString()}
-                renderItem={({ item }) => {
-                  if (item.role === 'user') {
-                    return (
-                      <View style={styles.presentationUserBubble}>
-                        <Text style={styles.presentationUserText}>{item.content}</Text>
-                      </View>
-                    );
-                  }
-                  return (
-                    <View style={styles.presentationAiBubble}>
-                      <Text style={styles.presentationAiText}>
-                        {item.error ? `⚠️ ${item.error}` : 
-                         item.results ? `📊 ${item.results.length} résultat(s)` : 
-                         '✅ Requête exécutée'}
-                      </Text>
-                    </View>
-                  );
-                }}
-                contentContainerStyle={styles.presentationList}
-              />
-            </>
-          )}
         </View>
-      )}
+
+        <KeyboardAvoidingView style={styles.chatArea} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}>
+          <FlatList ref={flatListRef} data={messages} keyExtractor={(_, i) => i.toString()} renderItem={renderMessage} contentContainerStyle={styles.listContent}
+            keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.welcome}>
+                <View style={styles.welcomeIcon}><Text style={styles.welcomeIconText}>E</Text></View>
+                <Text style={styles.welcomeTitle}>Bonjour, je suis Eric</Text>
+                <Text style={styles.welcomeText}>Votre assistant IA connecté à votre base de données.{'\n'}Base : {selectedBase.nom_base}</Text>
+                <View style={styles.welcomeTables}>
+                  <Text style={styles.welcomeTablesTitle}>Tables disponibles :</Text>
+                  {selectedBase.all_tables ? (
+                    <Text style={styles.welcomeTablesList}>🌐 Toutes les tables de la base "{selectedBase.nom_base}"</Text>
+                  ) : (
+                    <Text style={styles.welcomeTablesList}>{selectedBase.tables_list?.join(', ')}</Text>
+                  )}
+                </View>
+                
+              </View>
+            }
+          />
+          {isLoading && (
+            <View style={styles.loadingRow}>
+              <View style={styles.aiIcon}><Text style={styles.aiIconText}>E</Text></View>
+              <ActivityIndicator color="#6c63ff" size="small" />
+              <Text style={styles.loadingText}>Eric traite votre demande...</Text>
+            </View>
+          )}
+          {isSpeaking && (
+            <View style={styles.speakingRow}>
+              <Text style={styles.speakingText}>🔊 Eric parle...</Text>
+              <TouchableOpacity onPress={stopSpeaking}><Text style={styles.stopText}>Arrêter</Text></TouchableOpacity>
+            </View>
+          )}
+          <View style={styles.inputArea}>
+            {editingIndex !== null && (
+              <View style={styles.editingBanner}>
+                <Text style={styles.editingText}>✏️ Modification de la question</Text>
+                <TouchableOpacity onPress={cancelEdit}><Text style={styles.cancelEditText}>✕ Annuler</Text></TouchableOpacity>
+              </View>
+            )}
+            <View style={styles.inputBar}>
+              <TextInput ref={inputRef} style={styles.input} placeholder="Posez votre question..." placeholderTextColor="#94a3b8" value={inputText} onChangeText={setInputText} multiline maxLength={1000} />
+              <TouchableOpacity onPress={toggleVoiceRecognition} style={[styles.voiceButton, recognizing && styles.voiceButtonActive]}>
+                <Text style={[styles.voiceButtonText, recognizing && { color: '#fff' }]}>{recognizing ? '🎙️' : '🎤'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.sendButton, inputText.trim() && !isLoading ? styles.sendButtonActive : null]} onPress={handleSend} disabled={!inputText.trim() || isLoading}>
+                <Text style={[styles.sendButtonText, inputText.trim() && !isLoading ? { color: '#fff' } : null]}>{editingIndex !== null ? '✓' : '➤'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.disclaimer}>🔒 Eric peut faire des erreurs. Vérifiez les informations importantes.</Text>
+          </View>
+        </KeyboardAvoidingView>
+      </>
 
       {renderSidebar()}
       {renderSaveIndicatorModal()}
       {renderAlertModal()}
       {renderThresholdModal()}
+      {renderEditCredentialsModal()}
     </SafeAreaView>
   );
 }
 
 // ================================================================
 // COMPOSANT : MESSAGE IA (AVEC WEBVIEWS INTÉGRÉES)
-// ================================================================
-// ================================================================
-// COMPOSANT : MESSAGE IA (AVEC WEBVIEWS INTÉGRÉES ET GESTION D'ERREURS)
 // ================================================================
 const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
   const [showSql, setShowSql] = useState(false);
@@ -1090,7 +1350,6 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
         if (!value) return;
         const strValue = String(value);
         
-        // Détection des coordonnées GPS
         if ((key.toLowerCase().includes('latitude') || key.toLowerCase().includes('lat')) && 
             !isNaN(parseFloat(strValue))) {
           const lat = parseFloat(strValue);
@@ -1109,7 +1368,6 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
           }
         }
 
-        // Détection des URLs YouTube
         const youtubePattern = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([^\s&]+)/i;
         if (youtubePattern.test(strValue) && isValidUrl(strValue)) {
           const urls = splitUrls(strValue);
@@ -1127,7 +1385,6 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
           return;
         }
 
-        // Détection des images
         if ((strValue.match(/^https?:\/\/.*\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)/i) && isValidUrl(strValue)) ||
             strValue.match(/^data:image\/[a-zA-Z]+;base64,/)) {
           const urls = splitUrls(strValue);
@@ -1144,7 +1401,6 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
           return;
         }
 
-        // Détection des vidéos (autres que YouTube)
         if ((strValue.match(/^https?:\/\/.*\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v|3gp)/i) && isValidUrl(strValue)) ||
             strValue.match(/^data:video\/[a-zA-Z]+;base64,/)) {
           const urls = splitUrls(strValue);
@@ -1162,7 +1418,6 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
           return;
         }
 
-        // Détection des documents
         if ((strValue.match(/^https?:\/\/.*\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|json|xml|zip|rar|7z)/i) && isValidUrl(strValue)) ||
             strValue.match(/^data:application\/[a-zA-Z]+;base64,/)) {
           const urls = splitUrls(strValue);
@@ -1180,7 +1435,6 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
           return;
         }
 
-        // Détection des pages web
         if (strValue.match(/^https?:\/\/[^\s]+/) && isValidUrl(strValue)) {
           const urls = splitUrls(strValue);
           urls.forEach(url => {
@@ -1204,53 +1458,81 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
     return { images, videos, documents, pages, coordinates };
   };
 
-  // ================================================================
-  // DONNÉES DES GRAPHIQUES
-  // ================================================================
-  const getChartData = (results) => {
-    if (!results || results.length === 0) return null;
-    const keys = Object.keys(results[0]);
-    if (keys.length < 2) return null;
+ // ================================================================
+// DONNÉES DES GRAPHIQUES (CORRIGÉE)
+// ================================================================
+const getChartData = (results) => {
+  if (!results || results.length === 0) return null;
+  const keys = Object.keys(results[0]);
+  if (keys.length < 2) return null;
+  // 🔥 CORRECTION : Détection améliorée des colonnes
+  let labelKey = null;
+  let valueKey = null;
+  // 1. Identifier la colonne qui semble être une année ou une date
+  const datePatterns = ['annee', 'year', 'date', 'mois', 'month', 'jour', 'day', 'trimestre', 'quarter'];
+  const numericPatterns = ['nombre', 'count', 'total', 'sum', 'quantite', 'quantity', 'montant', 'amount', 'prix', 'price', 'valeur', 'value'];
 
-    let labelKey = null;
-    let valueKey = null;
-
-    for (const key of keys) {
-      const val = results[0][key];
-      const isNumeric = !isNaN(parseFloat(val)) && isFinite(val);
-      if (isNumeric && !valueKey) valueKey = key;
-      else if (!isNumeric && !labelKey) labelKey = key;
+  for (const key of keys) {
+    const keyLower = key.toLowerCase();
+    const val = results[0][key];
+    const isNumeric = !isNaN(parseFloat(val)) && isFinite(val);
+    const isDateLike = datePatterns.some(pattern => keyLower.includes(pattern));
+    const isNumericLike = numericPatterns.some(pattern => keyLower.includes(pattern));
+    // Si c'est une année ou une date, c'est le label (abscisse)
+    if (isDateLike && !labelKey) {
+      labelKey = key;
     }
-
-    if (!labelKey) labelKey = keys.find(k => k !== valueKey) || keys[0];
-    if (!valueKey) valueKey = keys.find(k => k !== labelKey) || keys[1];
-
-    if (!valueKey || !labelKey) return null;
-    if (isNaN(parseFloat(results[0][valueKey]))) return null;
-
-    const isLikelyRawData = keys.length > 2;
-    const colors = ['#6c63ff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
-    
-    return {
-      labelKey, valueKey, isLikelyRawData,
-      data: results.map((row, index) => {
-        const numVal = parseFloat(row[valueKey]) || 0;
-        const strLabel = String(row[labelKey] || 'N/A').substring(0, 15);
-        return {
-          value: numVal, label: strLabel, x: strLabel,
-          frontColor: colors[index % colors.length],
-          color: colors[index % colors.length], text: strLabel
-        };
-      })
-    };
+    // Si c'est un nombre et que ça correspond à un champ numérique typique
+    else if (isNumeric && isNumericLike && !valueKey) {
+      valueKey = key;
+    }
+    // Si c'est un nombre mais pas reconnu comme numérique typique
+    else if (isNumeric && !valueKey && !labelKey) {
+      valueKey = key;
+    }
+    // Si ce n'est pas un nombre et pas encore de label
+    else if (!isNumeric && !labelKey) {
+      labelKey = key;
+    }
+  }
+  // 2. Fallback si pas de label trouvé
+  if (!labelKey) {
+    labelKey = keys.find(k => !isNaN(parseFloat(results[0][k])) === false) || keys[0];
+  }
+  if (!valueKey) {
+    valueKey = keys.find(k => isNaN(parseFloat(results[0][k])) === false) || keys[1];
+  }
+  // 3. Vérification finale
+  if (!valueKey || !labelKey) return null;
+  if (isNaN(parseFloat(results[0][valueKey]))) return null;
+  // 4. Déterminer si c'est des données brutes (plus de 3 colonnes)
+  const isLikelyRawData = keys.length > 3;
+  const colors = ['#6c63ff', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6'];
+  return {
+    labelKey, 
+    valueKey, 
+    isLikelyRawData,
+    data: results.map((row, index) => {
+      const numVal = parseFloat(row[valueKey]) || 0;
+      const strLabel = String(row[labelKey] || 'N/A').substring(0, 20);
+      return {
+        value: numVal, 
+        label: strLabel, 
+        x: strLabel,
+        frontColor: colors[index % colors.length],
+        color: colors[index % colors.length], 
+        text: strLabel
+      };
+    })
   };
+};
 
   const media = extractMedia(item.results);
   const chartData = item.results ? getChartData(item.results) : null;
   const canRenderChart = !!chartData && item.results.length > 0 && !chartData.isLikelyRawData;
 
   // ================================================================
-  // RENDU DES GRAPHIQUES
+  // RENDU DES GRAPHIQUES (simplifié pour la lisibilité)
   // ================================================================
   const renderChart = (isExpanded = false) => {
     const width = isExpanded ? SCREEN_WIDTH - 60 : CHART_WIDTH;
@@ -1272,403 +1554,53 @@ const AiMessage = React.memo(({ item, onSaveIndicator, onSpeak }) => {
         </View>
       );
     }
-    if (viewMode === 'radar') {
-      return (
-        <View style={{ alignItems: 'center', padding: 10 }}>
-          <Text style={{ color: '#64748b', fontSize: 14, marginBottom: 10 }}>🕸️ Vue Radar</Text>
-          <BarChart 
-            data={chartData.data.map(d => ({ ...d, frontColor: d.color }))} 
-            width={width} height={height} barWidth={isExpanded ? 25 : 20} 
-            spacing={isExpanded ? 35 : 28} roundedTop roundedBottom 
-            hideRules={false} rulesLength={width - 60} 
-            yAxisLabelWidth={isExpanded ? 60 : 45} 
-            yAxisTextStyle={[styles.chartAxisText, isExpanded && { fontSize: 12 }]} 
-            xAxisLabelTextStyle={[styles.chartAxisText, isExpanded && { fontSize: 12 }]} 
-            noOfSections={5} showValuesAsTopLabel 
-            topLabelTextStyle={{ fontSize: isExpanded ? 12 : 11, color: '#64748b', fontWeight: 'bold' }} 
-          />
-        </View>
-      );
-    }
-    if (viewMode === 'polarArea') {
-      return (
-        <View style={{ alignItems: 'center', padding: 10 }}>
-          <Text style={{ color: '#64748b', fontSize: 14, marginBottom: 10 }}>🎯 Vue Polaire</Text>
-          <PieChart 
-            data={chartData.data} 
-            donut={false} 
-            radius={isExpanded ? 140 : 90} 
-            showText textColor="#ffffff" 
-            textSize={isExpanded ? 14 : 12} 
-            showTextBackground 
-            textBackgroundColor="#000000" 
-            textBackgroundRadius={isExpanded ? 26 : 22} 
-          />
-        </View>
-      );
-    }
     return null;
   };
 
- // ================================================================
-// RENDU DES MÉDIAS (AVEC GESTION D'ERREURS ET SCROLL VERTICAL)
-// ================================================================
-const renderMediaContent = () => {
-  const activeTab = viewMode;
-
-  // ===== CARTES =====
-  if (activeTab === 'maps' && media.coordinates.length > 0) {
-    return (
-      <ScrollView 
-        showsVerticalScrollIndicator={true}
-        style={{ maxHeight: 450 }}
-        nestedScrollEnabled={true}
-      >
-        {media.coordinates.map((coord, idx) => {
-          const mapId = `map-${idx}`;
-          if (webViewErrors[mapId]) {
-            return (
-              <View key={idx} style={[styles.mediaCard, { backgroundColor: '#fef2f2' }]}>
-                <Text style={[styles.mediaCardTitle, { color: '#dc2626' }]}>⚠️ Carte non disponible</Text>
-                <Text style={styles.mediaCardSub}>{coord.name}</Text>
-                <TouchableOpacity 
-                  style={[styles.mediaButton, { backgroundColor: '#6c63ff' }]}
-                  onPress={() => setWebViewErrors(prev => ({ ...prev, [mapId]: false }))}
-                >
-                  <Text style={styles.mediaButtonText}>🔄 Réessayer</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }
-
-          const mapHtml = `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                <style>
-                  body { margin: 0; padding: 0; }
-                  #map { height: 100vh; width: 100%; }
-                </style>
-              </head>
-              <body>
-                <div id="map"></div>
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-                <script>
-                  try {
-                    var map = L.map('map').setView([${coord.lat}, ${coord.lon}], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                      attribution: '© OpenStreetMap'
-                    }).addTo(map);
-                    L.marker([${coord.lat}, ${coord.lon}]).addTo(map)
-                      .bindPopup('${coord.name}').openPopup();
-                  } catch(e) {
-                    document.body.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">⚠️ Erreur de chargement de la carte</div>';
-                  }
-                </script>
-              </body>
-            </html>
-          `;
-          
-          return (
-            <View key={idx} style={styles.mediaCard}>
-              <Text style={styles.mediaCardTitle}>📍 {coord.name}</Text>
-              <Text style={styles.mediaCardSub}>Lat: {coord.lat}, Lon: {coord.lon}</Text>
-              <View style={styles.webViewContainer}>
-                <WebView
-                  originWhitelist={['*']}
-                  source={{ html: mapHtml }}
-                  style={styles.webViewMap}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  scrollEnabled={true}
-                  startInLoadingState={true}
-                  onError={() => handleWebViewError(mapId)}
-                  renderLoading={() => (
-                    <View style={styles.webViewLoading}>
-                      <ActivityIndicator color="#6c63ff" />
-                      <Text style={styles.webViewLoadingText}>Chargement de la carte...</Text>
-                    </View>
-                  )}
-                />
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  }
-
-  // ===== IMAGES =====
-  if (activeTab === 'images' && media.images.length > 0) {
-    return (
-      <ScrollView 
-        showsVerticalScrollIndicator={true}
-        style={{ maxHeight: 450 }}
-        nestedScrollEnabled={true}
-      >
-        <View style={styles.mediaGrid}>
-          {media.images.map((img, idx) => (
-            <TouchableOpacity 
-              key={idx} 
-              style={styles.mediaGridItem}
-              onPress={() => {
-                setSelectedMedia(img);
-                setMediaModalVisible(true);
-              }}
-            >
-              <Image 
-                source={{ uri: img.uri }} 
-                style={styles.mediaGridThumb} 
-                resizeMode="cover"
-                onError={() => {}}
-              />
-              <Text style={styles.mediaGridLabel} numberOfLines={1}>{img.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </ScrollView>
-    );
-  }
-
-  // ===== VIDÉOS =====
-  if (activeTab === 'videos' && media.videos.length > 0) {
-    return (
-      <ScrollView 
-        showsVerticalScrollIndicator={true}
-        style={{ maxHeight: 450 }}
-        nestedScrollEnabled={true}
-      >
-        {media.videos.map((video, idx) => {
-          const videoId = `video-${idx}`;
-          if (webViewErrors[videoId]) {
-            return (
-              <View key={idx} style={[styles.mediaCard, { backgroundColor: '#fef2f2' }]}>
-                <Text style={[styles.mediaCardTitle, { color: '#dc2626' }]}>⚠️ Vidéo non disponible</Text>
-                <Text style={styles.mediaCardSub}>{video.name}</Text>
-                <TouchableOpacity 
-                  style={[styles.mediaButton, { backgroundColor: '#6c63ff' }]}
-                  onPress={() => setWebViewErrors(prev => ({ ...prev, [videoId]: false }))}
-                >
-                  <Text style={styles.mediaButtonText}>🔄 Réessayer</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }
-
-          let videoUrl = video.uri;
-          let embedUrl = videoUrl;
-          
-          if (video.isYouTube) {
-            const youtubeMatch = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^\s&?]+)/);
-            if (youtubeMatch) {
-              embedUrl = `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-            }
-          }
-          
-          const videoHtml = `
-            <!DOCTYPE html>
-            <html>
-              <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-                <style>
-                  body { margin: 0; padding: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                  video, iframe { max-width: 100%; max-height: 100%; width: 100%; height: 100%; border: none; }
-                </style>
-              </head>
-              <body>
-                ${video.isYouTube ? 
-                  `<iframe src="${embedUrl}" allowfullscreen></iframe>` :
-                  `<video controls autoplay style="width:100%;height:100%;">
-                    <source src="${videoUrl}" type="video/mp4" />
-                    Votre navigateur ne supporte pas la lecture vidéo.
-                  </video>`
-                }
-              </body>
-            </html>
-          `;
-          
-          return (
-            <View key={idx} style={styles.mediaCard}>
-              <Text style={styles.mediaCardTitle}>🎬 {video.name}</Text>
-              {video.isYouTube && <Text style={styles.mediaCardSub}>📺 YouTube</Text>}
-              <View style={styles.webViewContainer}>
-                <WebView
-                  originWhitelist={['*']}
-                  source={{ html: videoHtml }}
-                  style={styles.webViewVideo}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={true}
-                  allowsFullscreenVideo={true}
-                  onError={() => handleWebViewError(videoId)}
-                  renderLoading={() => (
-                    <View style={styles.webViewLoading}>
-                      <ActivityIndicator color="#6c63ff" />
-                      <Text style={styles.webViewLoadingText}>Chargement de la vidéo...</Text>
-                    </View>
-                  )}
-                />
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  }
-
-  // ===== DOCUMENTS =====
-  if (activeTab === 'documents' && media.documents.length > 0) {
-    return (
-      <ScrollView 
-        showsVerticalScrollIndicator={true}
-        style={{ maxHeight: 450 }}
-        nestedScrollEnabled={true}
-      >
-        {media.documents.map((doc, idx) => {
-          const docId = `doc-${idx}`;
-          if (webViewErrors[docId]) {
-            return (
-              <View key={idx} style={[styles.mediaCard, { backgroundColor: '#fef2f2' }]}>
-                <Text style={[styles.mediaCardTitle, { color: '#dc2626' }]}>⚠️ Document non disponible</Text>
-                <Text style={styles.mediaCardSub}>{doc.name}</Text>
-                <TouchableOpacity 
-                  style={[styles.mediaButton, { backgroundColor: '#6c63ff' }]}
-                  onPress={() => setWebViewErrors(prev => ({ ...prev, [docId]: false }))}
-                >
-                  <Text style={styles.mediaButtonText}>🔄 Réessayer</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }
-
-          let viewerUrl = doc.uri;
-          if (isValidUrl(doc.uri)) {
-            viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.uri)}&embedded=true`;
-          } else {
-            viewerUrl = 'about:blank';
-          }
-          
-          return (
-            <View key={idx} style={styles.mediaCard}>
-              <Text style={styles.mediaCardTitle}>📄 {doc.name}</Text>
-              <Text style={styles.mediaCardSub}>Type: {doc.type.toUpperCase()}</Text>
-              <View style={styles.webViewContainer}>
-                <WebView
-                  originWhitelist={['*']}
-                  source={{ uri: viewerUrl }}
-                  style={styles.webViewDocument}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={true}
-                  onError={() => handleWebViewError(docId)}
-                  renderLoading={() => (
-                    <View style={styles.webViewLoading}>
-                      <ActivityIndicator color="#6c63ff" />
-                      <Text style={styles.webViewLoadingText}>Chargement du document...</Text>
-                    </View>
-                  )}
-                />
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  }
-
-  // ===== PAGES WEB =====
-  if (activeTab === 'pages' && media.pages.length > 0) {
-    return (
-      <ScrollView 
-        showsVerticalScrollIndicator={true}
-        style={{ maxHeight: 450 }}
-        nestedScrollEnabled={true}
-      >
-        {media.pages.map((page, idx) => {
-          const pageId = `page-${idx}`;
-          if (webViewErrors[pageId]) {
-            return (
-              <View key={idx} style={[styles.mediaCard, { backgroundColor: '#fef2f2' }]}>
-                <Text style={[styles.mediaCardTitle, { color: '#dc2626' }]}>⚠️ Page non disponible</Text>
-                <Text style={styles.mediaCardSub}>{page.name}</Text>
-                <TouchableOpacity 
-                  style={[styles.mediaButton, { backgroundColor: '#6c63ff' }]}
-                  onPress={() => setWebViewErrors(prev => ({ ...prev, [pageId]: false }))}
-                >
-                  <Text style={styles.mediaButtonText}>🔄 Réessayer</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }
-
-          const safeUrl = getSafeUrl(page.uri);
-          
-          return (
-            <View key={idx} style={styles.mediaCard}>
-              <Text style={styles.mediaCardTitle}>🌐 {page.name}</Text>
-              <Text style={styles.mediaCardSub} numberOfLines={1}>{page.uri}</Text>
-              <View style={styles.webViewContainer}>
-                <WebView
-                  originWhitelist={['*']}
-                  source={{ uri: safeUrl }}
-                  style={styles.webViewPage}
-                  javaScriptEnabled={true}
-                  domStorageEnabled={true}
-                  startInLoadingState={true}
-                  onError={() => handleWebViewError(pageId)}
-                  renderLoading={() => (
-                    <View style={styles.webViewLoading}>
-                      <ActivityIndicator color="#6c63ff" />
-                      <Text style={styles.webViewLoadingText}>Chargement de la page...</Text>
-                    </View>
-                  )}
-                />
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  }
-
-  return (
-    <View style={styles.noMediaBox}>
-      <Text style={styles.noMediaText}>Aucun contenu dans cet onglet</Text>
-    </View>
-  );
-};
+  // ================================================================
+  // RENDU DES MÉDIAS (simplifié)
+  // ================================================================
+  const renderMediaContent = () => {
+    if (viewMode === 'images' && media.images.length > 0) {
+      return (
+        <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: 450 }} nestedScrollEnabled={true}>
+          <View style={styles.mediaGrid}>
+            {media.images.map((img, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.mediaGridItem}
+                onPress={() => {
+                  setSelectedMedia(img);
+                  setMediaModalVisible(true);
+                }}
+              >
+                <Image source={{ uri: img.uri }} style={styles.mediaGridThumb} resizeMode="cover" onError={() => {}} />
+                <Text style={styles.mediaGridLabel} numberOfLines={1}>{img.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      );
+    }
+    return <View style={styles.noMediaBox}><Text style={styles.noMediaText}>Aucun contenu dans cet onglet</Text></View>;
+  };
 
   // ================================================================
   // ONGLETS DISPONIBLES
   // ================================================================
   const availableTabs = ['cards', 'table'];
-  const mediaTabs = [];
-  if (media.coordinates.length > 0) mediaTabs.push('maps');
-  if (media.images.length > 0) mediaTabs.push('images');
-  if (media.videos.length > 0) mediaTabs.push('videos');
-  if (media.documents.length > 0) mediaTabs.push('documents');
-  if (media.pages.length > 0) mediaTabs.push('pages');
-  
+  if (media.images.length > 0) availableTabs.push('images');
   if (canRenderChart) {
-    availableTabs.push('bar', 'line', 'pie', 'radar', 'polarArea');
+    availableTabs.push('bar', 'line', 'pie');
   }
 
-  const allTabs = [...availableTabs, ...mediaTabs];
   const tabLabels = {
     cards: '📋 Résultats',
     table: '📊 Tableau',
     bar: '📶 Barres',
     line: '📈 Lignes',
     pie: '🥧 Camembert',
-    radar: '🕸️ Radar',
-    polarArea: '🎯 Polaire',
-    maps: '🗺 Cartes',
-    images: '🖼 Images',
-    videos: '🎬 Vidéos',
-    documents: '📄 Documents',
-    pages: '🌐 Pages'
+    images: '🖼 Images'
   };
 
   // ================================================================
@@ -1687,16 +1619,21 @@ const renderMediaContent = () => {
   }
 
   if (item.content) {
+    if (item.isAlert) {
+      return (
+        <View style={styles.aiRow}>
+          <View style={[styles.aiIcon, { backgroundColor: '#ef4444' }]}><Text style={styles.aiIconText}>🚨</Text></View>
+          <View style={[styles.aiContent, { backgroundColor: '#fef2f2', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#fecaca' }]}>
+            <Text style={{ fontSize: 14, color: '#b91c1c', lineHeight: 20 }} selectable>{item.content}</Text>
+          </View>
+        </View>
+      );
+    }
     return (
       <View style={styles.aiRow}>
         <View style={styles.aiIcon}><Text style={styles.aiIconText}>E</Text></View>
         <View style={[styles.aiContent, { backgroundColor: '#f8fafc', padding: 12, borderRadius: 12 }]}>
           <Text style={{ fontSize: 14, color: '#1e293b', lineHeight: 20 }} selectable>{item.content}</Text>
-          {onSpeak && (
-            <TouchableOpacity onPress={() => onSpeak(item.content)} style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#ede9fe', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-              <Text style={{ color: '#6c63ff', fontSize: 12, fontWeight: '600' }}>🔊 Écouter</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     );
@@ -1720,46 +1657,27 @@ const renderMediaContent = () => {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartTabsScroll}>
               <View style={styles.chartTabs}>
-                {allTabs.map((mode) => {
-                  const isMediaTab = ['maps', 'images', 'videos', 'documents', 'pages'].includes(mode);
-                  const hasMediaContent = 
-                    (mode === 'maps' && media.coordinates.length > 0) ||
-                    (mode === 'images' && media.images.length > 0) ||
-                    (mode === 'videos' && media.videos.length > 0) ||
-                    (mode === 'documents' && media.documents.length > 0) ||
-                    (mode === 'pages' && media.pages.length > 0);
-                  
-                  const disabled = (isMediaTab && !hasMediaContent);
-                  
-                  return (
-                    <TouchableOpacity
-                      key={mode}
-                      style={[styles.chartTab, viewMode === mode && styles.chartTabActive, disabled && { opacity: 0.4 }]}
-                      onPress={() => !disabled && setViewMode(mode)}
-                      disabled={disabled}
-                    >
-                      <Text style={[styles.chartTabText, viewMode === mode && styles.chartTabTextActive]}>
-                        {tabLabels[mode] || mode}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {availableTabs.map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[styles.chartTab, viewMode === mode && styles.chartTabActive]}
+                    onPress={() => setViewMode(mode)}
+                  >
+                    <Text style={[styles.chartTabText, viewMode === mode && styles.chartTabTextActive]}>
+                      {tabLabels[mode] || mode}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </ScrollView>
 
             <View style={styles.resultsContent}>
-              {/* RÉSULTATS EN CARTES */}
               {viewMode === 'cards' && (
                 <ScrollView showsVerticalScrollIndicator style={{ maxHeight: 400 }}>
                   {item.results.map((row, idx) => (
                     <View key={idx} style={styles.resultCard}>
                       <View style={styles.resultCardHeader}>
                         <Text style={styles.resultCardIndex}>#{idx + 1}</Text>
-                        {onSpeak && (
-                          <TouchableOpacity style={{ backgroundColor: '#ede9fe', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }} onPress={() => onSpeak(`${Object.values(row).join(', ')}`)}>
-                            <Text style={{ color: '#6c63ff', fontSize: 11, fontWeight: '600' }}>🔊</Text>
-                          </TouchableOpacity>
-                        )}
                       </View>
                       {Object.entries(row).map(([key, value], i) => (
                         <View key={i} style={styles.resultRow}>
@@ -1772,13 +1690,8 @@ const renderMediaContent = () => {
                 </ScrollView>
               )}
 
-              {/* TABLEAU */}
               {viewMode === 'table' && item.results.length > 0 && (
-                <ScrollView 
-                  style={styles.tableWrapper} 
-                  showsVerticalScrollIndicator={true}
-                  nestedScrollEnabled
-                >
+                <ScrollView style={styles.tableWrapper} showsVerticalScrollIndicator={true} nestedScrollEnabled>
                   <ScrollView horizontal showsHorizontalScrollIndicator={true}>
                     <View style={{ minWidth: '100%' }}>
                       <View style={styles.tableHeader}>
@@ -1808,13 +1721,8 @@ const renderMediaContent = () => {
                       ))}
                       
                       {displayLimit < item.results.length && (
-                        <TouchableOpacity 
-                          onPress={() => setDisplayLimit(displayLimit + 50)}
-                          style={styles.seeMoreButton}
-                        >
-                          <Text style={styles.seeMoreText}>
-                            Voir plus ({item.results.length - displayLimit} lignes restantes)
-                          </Text>
+                        <TouchableOpacity onPress={() => setDisplayLimit(displayLimit + 50)} style={styles.seeMoreButton}>
+                          <Text style={styles.seeMoreText}>Voir plus ({item.results.length - displayLimit} lignes restantes)</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1822,30 +1730,15 @@ const renderMediaContent = () => {
                 </ScrollView>
               )}
 
-              {/* GRAPHIQUES */}
-              {canRenderChart && (viewMode === 'bar' || viewMode === 'line' || viewMode === 'pie' || viewMode === 'radar' || viewMode === 'polarArea') && (
+              {canRenderChart && (viewMode === 'bar' || viewMode === 'line' || viewMode === 'pie') && (
                 <TouchableOpacity activeOpacity={0.8} onPress={() => setIsChartExpanded(true)} style={styles.chartContainer}>
                   {renderChart(false)}
                   <View style={styles.zoomHint}><Text style={styles.zoomHintText}>🔍 Cliquer pour agrandir</Text></View>
                 </TouchableOpacity>
               )}
 
-              {/* MÉDIAS */}
-              {['maps', 'images', 'videos', 'documents', 'pages'].includes(viewMode) && renderMediaContent()}
-
-              {!canRenderChart && (viewMode === 'bar' || viewMode === 'line' || viewMode === 'pie' || viewMode === 'radar' || viewMode === 'polarArea') && (
-                <View style={styles.chartWarning}>
-                  <Text style={styles.chartWarningText}>
-                    ⚠️ Les graphiques nécessitent au moins une colonne texte et une colonne numérique.
-                    {'\n'}Colonnes détectées : {item.results[0] ? Object.keys(item.results[0]).join(', ') : 'Aucune'}
-                  </Text>
-                </View>
-              )}
+              {viewMode === 'images' && renderMediaContent()}
             </View>
-
-            {(item.count || item.results.length) > 50 && viewMode === 'table' && (
-              <View style={styles.resultsFooter}><Text style={styles.resultsFooterText}>Affichage limité à 50 lignes sur {item.count || item.results.length}</Text></View>
-            )}
           </View>
         ) : (
           <View style={styles.noResultBox}><Text style={styles.aiText}>✅ Requête exécutée avec succès, mais aucun résultat trouvé.</Text></View>
@@ -1866,7 +1759,7 @@ const renderMediaContent = () => {
         )}
       </View>
 
-      {/* MODAL POUR LES IMAGES/VIDÉOS EN PLEIN ÉCRAN */}
+      {/* MODAL POUR LES IMAGES EN PLEIN ÉCRAN */}
       <Modal visible={mediaModalVisible} transparent animationType="fade" onRequestClose={() => setMediaModalVisible(false)}>
         <View style={styles.mediaModalOverlay}>
           <TouchableOpacity style={styles.mediaModalClose} onPress={() => setMediaModalVisible(false)}>
@@ -1876,14 +1769,7 @@ const renderMediaContent = () => {
             <View style={styles.mediaModalContent}>
               <Text style={styles.mediaModalTitle}>{selectedMedia.name}</Text>
               {selectedMedia.uri && (
-                selectedMedia.uri.match(/^data:image/) || selectedMedia.uri.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)/i) ? (
-                  <Image source={{ uri: selectedMedia.uri }} style={styles.mediaModalImage} resizeMode="contain" />
-                ) : selectedMedia.uri.match(/^data:video/) || selectedMedia.uri.match(/\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v|3gp)/i) ? (
-                  <View style={styles.mediaModalVideoContainer}>
-                    <Text style={styles.mediaModalVideoPlaceholder}>🎬 Lecture vidéo</Text>
-                    <Text style={styles.mediaModalVideoUrl} selectable>{selectedMedia.uri}</Text>
-                  </View>
-                ) : null
+                <Image source={{ uri: selectedMedia.uri }} style={styles.mediaModalImage} resizeMode="contain" />
               )}
             </View>
           )}
@@ -1898,9 +1784,7 @@ const renderMediaContent = () => {
               <Text style={styles.expandedChartTitle}>
                 {viewMode === 'bar' ? '📶 Graphique en Barres' : 
                  viewMode === 'line' ? '📈 Graphique en Lignes' : 
-                 viewMode === 'pie' ? '🥧 Graphique en Camembert' :
-                 viewMode === 'radar' ? '🕸️ Graphique Radar' :
-                 viewMode === 'polarArea' ? '🎯 Graphique Polaire' : '📊 Graphique'}
+                 viewMode === 'pie' ? '🥧 Graphique en Camembert' : '📊 Graphique'}
               </Text>
               <TouchableOpacity onPress={() => setIsChartExpanded(false)} style={styles.closeExpandedButton}>
                 <Text style={styles.closeExpandedText}>✕</Text>
@@ -1917,7 +1801,7 @@ const renderMediaContent = () => {
 });
 
 // ================================================================
-// STYLES (avec les nouveaux styles WebView)
+// STYLES
 // ================================================================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
@@ -1960,9 +1844,7 @@ const styles = StyleSheet.create({
   modalCloseText: { fontSize: 14, color: '#64748b', fontWeight: '600' },
   header: { height: 60, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#e5e7eb', backgroundColor: '#ffffff' },
   headerLeft: { flex: 1 },
-  headerCenter: { flex: 1, marginHorizontal: 8 },
   headerUser: { fontSize: 11, color: '#6b7280', marginTop: 2 },
-  headerSub: { fontSize: 10, color: '#6b7280', marginTop: 2 },
   brand: { fontSize: 12, fontWeight: '800', color: '#6c63ff' },
   backButton: { paddingVertical: 6, paddingHorizontal: 10, backgroundColor: '#f1f5f9', borderRadius: 8 },
   backText: { fontSize: 13, color: '#6c63ff', fontWeight: '600' },
@@ -2096,8 +1978,6 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', width: '50%', marginBottom: 8 },
   legendColor: { width: 12, height: 12, borderRadius: 6, marginRight: 8 },
   legendText: { fontSize: 12, color: '#475569', flex: 1 },
-  rawDataWarning: { padding: 12, backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#fdba74', borderRadius: 8, marginHorizontal: 14, marginTop: 8, marginBottom: 8 },
-  rawDataWarningText: { fontSize: 12, color: '#9a3412', lineHeight: 18 },
   zoomHint: { marginTop: 8, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#f1f5f9', borderRadius: 20, alignSelf: 'center' },
   zoomHintText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
   expandedChartOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
@@ -2107,27 +1987,7 @@ const styles = StyleSheet.create({
   closeExpandedButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fef2f2', justifyContent: 'center', alignItems: 'center' },
   closeExpandedText: { fontSize: 18, color: '#ef4444', fontWeight: 'bold' },
   expandedChartScroll: { padding: 20, alignItems: 'center', paddingBottom: 40 },
-  // ===== STYLES PRÉSENTATION =====
-  presentationContainer: { flex: 1, backgroundColor: '#0a0a1a', padding: 20 },
-  presentationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
-  presentationTitle: { fontSize: 18, fontWeight: '700', color: '#ffffff' },
-  closePresentationButton: { backgroundColor: '#ef4444', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  closePresentationText: { color: '#ffffff', fontWeight: '600', fontSize: 14 },
-  presentationNavigation: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 16, gap: 20 },
-  presentationNavButton: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  presentationNavText: { fontSize: 24, color: '#ffffff' },
-  presentationCounter: { fontSize: 16, color: '#94a3b8', fontWeight: '600' },
-  presentationContent: { alignItems: 'center', paddingVertical: 20, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, marginBottom: 20 },
-  presentationIndicatorName: { fontSize: 24, fontWeight: '700', color: '#ffffff', textAlign: 'center', marginBottom: 8 },
-  presentationIndicatorDesc: { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
-  presentationList: { paddingVertical: 10 },
-  presentationUserBubble: { alignSelf: 'flex-end', backgroundColor: '#6c63ff', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, borderBottomRightRadius: 4, marginBottom: 8, maxWidth: '85%' },
-  presentationUserText: { color: '#ffffff', fontSize: 14 },
-  presentationAiBubble: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.08)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, borderBottomLeftRadius: 4, marginBottom: 8, maxWidth: '85%' },
-  presentationAiText: { color: '#e2e8f0', fontSize: 14 },
-  presentationEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
-  presentationEmptyText: { fontSize: 20, fontWeight: '700', color: '#ffffff', marginBottom: 8, textAlign: 'center' },
-  presentationEmptySub: { fontSize: 14, color: '#94a3b8', textAlign: 'center' },
+
   // ===== STYLES POUR LE TABLEAU =====
   tableWrapper: {maxHeight: 350,borderWidth: 1,borderColor: '#e5e7eb',borderRadius: 8,},
   tableHeader: {flexDirection: 'row',backgroundColor: '#6c63ff',borderRadius: 8,marginBottom: 4,paddingVertical: 4,},
@@ -2141,33 +2001,55 @@ const styles = StyleSheet.create({
   resultsContent: {flex: 1,minHeight: 200,maxHeight: 500,},
   seeMoreButton: {padding: 12,alignItems: 'center',backgroundColor: '#f0f9ff',borderTopWidth: 1,borderTopColor: '#e5e7eb',},
   seeMoreText: {color: '#6c63ff',fontSize: 13,fontWeight: '600',},
+
   // ===== STYLES POUR LES MÉDIAS =====
-mediaCard: {backgroundColor: '#f8fafc', borderRadius: 12,padding: 14,marginBottom: 10,borderWidth: 1,borderColor: '#e5e7eb',},
-mediaCardTitle: {fontSize: 14,fontWeight: '700',color: '#1e293b',marginBottom: 4,},
-mediaCardSub: {fontSize: 12,color: '#64748b',marginBottom: 8,},
-mediaButton: {backgroundColor: '#6c63ff',paddingVertical: 10,paddingHorizontal: 16,borderRadius: 8,alignItems: 'center',},
-mediaButtonText: {color: '#ffffff',fontSize: 13,fontWeight: '600',},
-mediaGrid: {flexDirection: 'row',flexWrap: 'wrap',padding: 8,justifyContent: 'space-between',},
-mediaGridItem: {width: '48%',marginBottom: 12,borderRadius: 12,overflow: 'hidden',backgroundColor: '#f1f5f9',borderWidth: 1,borderColor: '#e5e7eb',},
-mediaGridThumb: {width: '100%',height: 120,},
-mediaGridLabel: {fontSize: 12,color: '#475569',padding: 8,fontWeight: '500',},
-noMediaBox: {padding: 40,alignItems: 'center',},
-noMediaText: {fontSize: 14,color: '#94a3b8',textAlign: 'center',},
-mediaModalOverlay: {flex: 1,backgroundColor: 'rgba(0,0,0,0.95)',justifyContent: 'center',alignItems: 'center',padding: 20,},
-mediaModalClose: {position: 'absolute',top: 50,right: 20,zIndex: 10,width: 44,height: 44,borderRadius: 22,backgroundColor: 'rgba(255,255,255,0.2)',justifyContent: 'center',alignItems: 'center',},
-mediaModalCloseText: {color: '#fff',fontSize: 24,fontWeight: 'bold',},
-mediaModalContent: {width: '100%',maxHeight: '80%',alignItems: 'center',},
-mediaModalTitle: {color: '#ffffff',fontSize: 16,fontWeight: '700',marginBottom: 12,textAlign: 'center',},
-mediaModalImage: {width: '100%',height: 400,borderRadius: 8,},
-mediaModalVideoContainer: {width: '100%',height: 300,backgroundColor: '#1a1a2e',borderRadius: 8,justifyContent: 'center',alignItems: 'center',padding: 20,},
-mediaModalVideoPlaceholder: {color: '#ffffff',fontSize: 24,marginBottom: 12,},
-mediaModalVideoUrl: {color: '#94a3b8',fontSize: 12,textAlign: 'center',},
-  // Nouveaux styles pour les WebViews
-webViewContainer: {height: 300,borderRadius: 8,overflow: 'hidden',backgroundColor: '#f1f5f9',marginTop: 8,},
-webViewMap: {width: '100%',height: '100%',},
-webViewVideo: {width: '100%',height: '100%',backgroundColor: '#000',},
-webViewDocument: {width: '100%',height: '100%',},
-webViewPage: {width: '100%',height: '100%',},
-webViewLoading: {flex: 1,justifyContent: 'center',alignItems: 'center',backgroundColor: '#f8fafc',},
-webViewLoadingText: {marginTop: 10,fontSize: 13,color: '#64748b',},
+  mediaCard: {backgroundColor: '#f8fafc', borderRadius: 12,padding: 14,marginBottom: 10,borderWidth: 1,borderColor: '#e5e7eb',},
+  mediaCardTitle: {fontSize: 14,fontWeight: '700',color: '#1e293b',marginBottom: 4,},
+  mediaCardSub: {fontSize: 12,color: '#64748b',marginBottom: 8,},
+  mediaButton: {backgroundColor: '#6c63ff',paddingVertical: 10,paddingHorizontal: 16,borderRadius: 8,alignItems: 'center',},
+  mediaButtonText: {color: '#ffffff',fontSize: 13,fontWeight: '600',},
+  mediaGrid: {flexDirection: 'row',flexWrap: 'wrap',padding: 8,justifyContent: 'space-between',},
+  mediaGridItem: {width: '48%',marginBottom: 12,borderRadius: 12,overflow: 'hidden',backgroundColor: '#f1f5f9',borderWidth: 1,borderColor: '#e5e7eb',},
+  mediaGridThumb: {width: '100%',height: 120,},
+  mediaGridLabel: {fontSize: 12,color: '#475569',padding: 8,fontWeight: '500',},
+  noMediaBox: {padding: 40,alignItems: 'center',},
+  noMediaText: {fontSize: 14,color: '#94a3b8',textAlign: 'center',},
+  mediaModalOverlay: {flex: 1,backgroundColor: 'rgba(0,0,0,0.95)',justifyContent: 'center',alignItems: 'center',padding: 20,},
+  mediaModalClose: {position: 'absolute',top: 50,right: 20,zIndex: 10,width: 44,height: 44,borderRadius: 22,backgroundColor: 'rgba(255,255,255,0.2)',justifyContent: 'center',alignItems: 'center',},
+  mediaModalCloseText: {color: '#fff',fontSize: 24,fontWeight: 'bold',},
+  mediaModalContent: {width: '100%',maxHeight: '80%',alignItems: 'center',},
+  mediaModalTitle: {color: '#ffffff',fontSize: 16,fontWeight: '700',marginBottom: 12,textAlign: 'center',},
+  mediaModalImage: {width: '100%',height: 400,borderRadius: 8,},
+  mediaModalVideoContainer: {width: '100%',height: 300,backgroundColor: '#1a1a2e',borderRadius: 8,justifyContent: 'center',alignItems: 'center',padding: 20,},
+  mediaModalVideoPlaceholder: {color: '#ffffff',fontSize: 24,marginBottom: 12,},
+  mediaModalVideoUrl: {color: '#94a3b8',fontSize: 12,textAlign: 'center',},
+  
+  // ===== STYLES POUR LA SURVEILLANCE =====
+  monitoringContainer: { flex: 1, padding: 16, backgroundColor: '#0a0a1a' },
+  monitoringHeader: { marginBottom: 20 },
+  monitoringTitle: { fontSize: 22, fontWeight: '700', color: '#ffffff', marginBottom: 4 },
+  monitoringSubtitle: { fontSize: 14, color: '#94a3b8' },
+  monitoringStatus: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  monitoringControls: { flexDirection: 'row', gap: 12, marginBottom: 20, flexWrap: 'wrap' },
+  monitoringButton: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, alignItems: 'center', minWidth: 120, flex: 1 },
+  monitoringButtonStart: { backgroundColor: '#22c55e' },
+  monitoringButtonStop: { backgroundColor: '#ef4444' },
+  monitoringButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  monitoringStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+  monitoringStatCard: { flex: 1, minWidth: '45%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  monitoringStatLabel: { fontSize: 12, color: '#94a3b8', marginBottom: 4 },
+  monitoringStatValue: { fontSize: 20, fontWeight: '700', color: '#ffffff' },
+  monitoringAlerts: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, marginBottom: 16 },
+  monitoringAlertsTitle: { fontSize: 16, fontWeight: '600', color: '#ef4444', marginBottom: 10 },
+  monitoringAlertItem: { paddingVertical: 10, paddingHorizontal: 12, borderLeftWidth: 3, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 6, marginBottom: 6 },
+  monitoringAlertText: { fontSize: 13, color: '#e2e8f0' },
+  monitoringTables: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 16, flex: 1 },
+  monitoringTablesTitle: { fontSize: 16, fontWeight: '600', color: '#ffffff', marginBottom: 10 },
+  monitoringTableItem: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+  monitoringTableHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  monitoringTableName: { fontSize: 13, color: '#e2e8f0', fontWeight: '500' },
+  monitoringTableRows: { fontSize: 12, color: '#94a3b8' },
+  monitoringTableDetails: { flexDirection: 'row', gap: 16, marginTop: 4 },
+  monitoringTableDetail: { fontSize: 11, color: '#64748b' },
+  monitoringStatusText:{color:'white'}
 });
