@@ -32,6 +32,8 @@
         .header-btn.active { background-color: #ede9fe; }
         .header-btn.danger:hover { background-color: #fecaca; }
         .header-btn.voice-active { background-color: #ef4444; color: #ffffff; }
+        .header-btn .badge-count { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .header-btn.alert-badge { position: relative; }
 
         /* ===== ZONE DE CHAT ===== */
         .chat-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; background-color: #ffffff; position: relative; }
@@ -87,7 +89,7 @@
         .chart-container { padding: 16px; min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; width: 100%; }
         .chart-container canvas { max-width: 100% !important; height: auto !important; }
         .chart-clickable { cursor: pointer; position: relative; width: 100%; border-radius: 12px; padding: 8px; }
-        .chart-clickable:hover { background: var(--gray-50); }
+        .chart-clickable:hover { background: #f8fafc; }
         .zoom-hint { margin-top: 8px; padding: 6px 12px; background-color: #f1f5f9; border-radius: 20px; font-size: 12px; color: #64748b; display: inline-block; }
 
         /* ===== MÉDIAS ===== */
@@ -98,8 +100,6 @@
         .media-card.error .media-card-title { color: #dc2626; }
         .media-btn { background-color: #6c63ff; color: #ffffff; padding: 10px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
         .media-btn:hover { background-color: #5b52e6; transform: scale(1.02); }
-        .media-btn.danger { background-color: #ef4444; }
-        .media-btn.danger:hover { background-color: #dc2626; }
         .media-grid { display: flex; flex-wrap: wrap; gap: 10px; padding: 8px; }
         .media-grid-item { width: calc(50% - 5px); border-radius: 12px; overflow: hidden; background-color: #f1f5f9; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.2s; }
         .media-grid-item:hover { transform: scale(1.02); }
@@ -113,7 +113,7 @@
         .webview-loading .loading-text { margin-top: 10px; font-size: 13px; color: #64748b; }
         .no-media { padding: 40px; text-align: center; color: #94a3b8; font-size: 14px; }
 
-        /* ===== LOADING / SPEAKING ===== */
+        /* ===== STATUS BAR ===== */
         .status-bar { display: flex; align-items: center; padding: 10px 16px; margin: 0 14px 8px; border-radius: 12px; background-color: #f8fafc; gap: 10px; flex-shrink: 0; }
         .status-bar.speaking { background-color: #ede9fe; }
         .status-bar .status-icon { width: 32px; height: 32px; border-radius: 50%; background-color: #6c63ff; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: bold; font-size: 14px; flex-shrink: 0; }
@@ -121,6 +121,7 @@
         .status-bar.speaking .status-text { color: #6c63ff; font-weight: 600; }
         .status-bar .stop-btn { color: #ef4444; font-weight: 700; font-size: 13px; background: none; border: none; cursor: pointer; padding: 4px 8px; }
         .status-bar .stop-btn:hover { text-decoration: underline; }
+        .status-bar .spinner-small { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #6c63ff; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
 
         /* ===== INPUT ===== */
         .input-area { padding: 10px 14px 12px; border-top: 1px solid #e5e7eb; background-color: #ffffff; flex-shrink: 0; }
@@ -150,7 +151,7 @@
 
         /* ===== MODAL ===== */
         .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; animation: fadeIn 0.2s ease; }
-        .modal-content { background-color: #ffffff; border-radius: 20px; padding: 28px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-content { background-color: #ffffff; border-radius: 20px; padding: 28px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal-title { font-size: 20px; font-weight: 700; color: #1a1a2e; text-align: center; margin-bottom: 6px; }
         .modal-subtitle { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 20px; line-height: 1.4; }
         .modal-icon { width: 56px; height: 56px; border-radius: 50%; background-color: #ede9fe; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 14px; }
@@ -162,6 +163,7 @@
         .btn-primary { background-color: #6c63ff; color: #ffffff; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; width: 100%; cursor: pointer; transition: all 0.2s; }
         .btn-primary:hover { background-color: #5b52e6; transform: scale(1.01); }
         .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-primary .spinner-small { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
         .btn-link { background: none; border: none; color: #6c63ff; font-weight: 600; font-size: 14px; padding: 14px; width: 100%; cursor: pointer; }
         .btn-link:hover { text-decoration: underline; }
         .btn-close-modal { margin-top: 20px; padding: 12px; background: none; border: none; border-top: 1px solid #f1f5f9; color: #64748b; font-weight: 600; width: 100%; cursor: pointer; }
@@ -188,6 +190,7 @@
         .indicator-item .indicator-actions button:hover { background-color: #fecaca; }
         .indicator-item .indicator-actions .alert-btn { border-color: #fcd34d; background-color: #fef3c7; }
         .indicator-item .indicator-actions .alert-btn:hover { background-color: #fcd34d; }
+        .empty-sidebar { text-align: center; color: #94a3b8; padding: 40px 0; font-size: 14px; }
 
         /* ===== ALERTES ===== */
         .alert-item { padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #ef4444; background-color: #fef2f2; }
@@ -197,37 +200,13 @@
         .alert-item .alert-detail { font-size: 12px; color: #64748b; }
         .alert-item .alert-close { color: #ef4444; font-size: 16px; background: none; border: none; cursor: pointer; }
 
-        /* ===== MODE PRÉSENTATION ===== */
-        .presentation-mode { background-color: #0a0a1a; flex: 1; padding: 20px; display: flex; flex-direction: column; }
-        .presentation-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .presentation-title { font-size: 18px; font-weight: 700; color: #ffffff; }
-        .presentation-close { background-color: #ef4444; padding: 8px 16px; border-radius: 20px; border: none; color: #ffffff; font-weight: 600; font-size: 14px; cursor: pointer; }
-        .presentation-close:hover { background-color: #dc2626; }
-        .presentation-nav { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 16px 0; }
-        .presentation-nav button { width: 50px; height: 50px; border-radius: 50%; border: none; background-color: rgba(255,255,255,0.1); color: #ffffff; font-size: 24px; cursor: pointer; transition: background 0.2s; }
-        .presentation-nav button:hover { background-color: rgba(255,255,255,0.2); }
-        .presentation-counter { font-size: 16px; color: #94a3b8; font-weight: 600; }
-        .presentation-content { text-align: center; padding: 20px 16px; background-color: rgba(255,255,255,0.05); border-radius: 16px; margin-bottom: 20px; }
-        .presentation-indicator-name { font-size: 24px; font-weight: 700; color: #ffffff; margin-bottom: 8px; }
-        .presentation-indicator-desc { font-size: 14px; color: #94a3b8; }
-        .presentation-messages { flex: 1; overflow-y: auto; padding: 10px 0; }
-        .presentation-message.user { align-self: flex-end; background-color: #6c63ff; color: #ffffff; padding: 10px 16px; border-radius: 16px; border-bottom-right-radius: 4px; margin-bottom: 8px; max-width: 85%; }
-        .presentation-message.assistant { align-self: flex-start; background-color: rgba(255,255,255,0.08); color: #e2e8f0; padding: 10px 16px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 8px; max-width: 85%; }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 576px) {
-            .modal-content { padding: 20px; margin: 10px; }
-            .sidebar { width: 85%; max-width: 300px; }
-            .media-grid-item { width: 100%; }
-            .result-label { width: 80px; }
-            .chart-tab { min-width: 60px; font-size: 10px; padding: 6px 10px; }
-        }
-
-        /* ===== SCROLLBAR ===== */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* ===== TOAST ===== */
+        #toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 9999; max-width: 350px; }
+        .toast-item { background: #ffffff; border-radius: 12px; padding: 14px 18px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); margin-top: 10px; border-left: 4px solid #6c63ff; animation: slideInRight 0.3s ease; display: flex; align-items: flex-start; gap: 12px; }
+        .toast-item.error { border-left-color: #ef4444; }
+        .toast-item.success { border-left-color: #22c55e; }
+        .toast-item .toast-close { background: none; border: none; font-size: 16px; color: #94a3b8; cursor: pointer; padding: 0 4px; }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
         /* ===== ÉCRAN DE CONNEXION ===== */
         .login-screen { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; background-color: #ffffff; }
@@ -266,9 +245,74 @@
         .empty-state .refresh-btn { margin-top: 16px; padding: 10px 20px; background-color: #f1f5f9; border-radius: 10px; border: none; color: #6c63ff; font-weight: 600; font-size: 14px; cursor: pointer; transition: background 0.2s; }
         .empty-state .refresh-btn:hover { background-color: #e2e8f0; }
 
-        /* ===== BADGE ALERTE ===== */
-        .alert-badge { position: relative; }
-        .alert-badge .badge-count { position: absolute; top: -4px; right: -4px; background-color: #ef4444; color: #ffffff; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        /* ===== SURVEILLANCE DES BASES ===== */
+        .monitoring-container { flex: 1; padding: 20px; background-color: #0a0a1a; overflow-y: auto; }
+        .monitoring-header { margin-bottom: 24px; }
+        .monitoring-title { font-size: 22px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
+        .monitoring-subtitle { font-size: 14px; color: #94a3b8; }
+        .monitoring-status { font-size: 13px; font-weight: 600; margin-top: 4px; }
+        .monitoring-status.active { color: #22c55e; }
+        .monitoring-status.inactive { color: #ef4444; }
+        .monitoring-controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .monitoring-btn { padding: 12px 20px; border-radius: 12px; border: none; font-size: 14px; font-weight: 700; color: #ffffff; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 120px; }
+        .monitoring-btn.start { background-color: #22c55e; }
+        .monitoring-btn.start:hover { background-color: #16a34a; }
+        .monitoring-btn.stop { background-color: #ef4444; }
+        .monitoring-btn.stop:hover { background-color: #dc2626; }
+        .monitoring-btn.refresh { background-color: #6c63ff; }
+        .monitoring-btn.refresh:hover { background-color: #5b52e6; }
+        .monitoring-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .monitoring-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+        .monitoring-stat { background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.05); }
+        .monitoring-stat-label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+        .monitoring-stat-value { font-size: 20px; font-weight: 700; color: #ffffff; }
+        .monitoring-stat-value.danger { color: #ef4444; }
+        .monitoring-stat.full-width { grid-column: span 2; }
+        
+        .monitoring-alerts { background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .monitoring-alerts-title { font-size: 16px; font-weight: 600; color: #ef4444; margin-bottom: 10px; }
+        .monitoring-alert-item { padding: 10px 12px; border-left: 3px solid #ef4444; background-color: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 6px; }
+        .monitoring-alert-text { font-size: 13px; color: #e2e8f0; }
+        
+        .monitoring-tables { background-color: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; flex: 1; }
+        .monitoring-tables-title { font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 10px; }
+        .monitoring-table-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .monitoring-table-header { display: flex; justify-content: space-between; align-items: center; }
+        .monitoring-table-name { font-size: 13px; color: #e2e8f0; font-weight: 500; }
+        .monitoring-table-rows { font-size: 12px; color: #94a3b8; }
+        .monitoring-table-details { display: flex; gap: 16px; margin-top: 4px; }
+        .monitoring-table-detail { font-size: 11px; color: #64748b; }
+        .monitoring-table-detail.danger { color: #ef4444; font-weight: bold; }
+        .monitoring-empty { color: #94a3b8; font-size: 14px; text-align: center; padding: 20px 0; line-height: 1.6; }
+        .monitoring-footer { margin-top: 16px; padding: 12px; background-color: rgba(255,255,255,0.03); border-radius: 8px; text-align: center; }
+        .monitoring-footer-text { color: #94a3b8; font-size: 13px; }
+        .monitoring-footer-text .last-update { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+        /* ===== MODIFICATION DES ACCÈS ===== */
+        .credentials-fields .input-group-custom { margin-bottom: 12px; }
+        .credentials-hint { font-size: 11px; color: #94a3b8; margin-bottom: 16px; text-align: center; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 576px) {
+            .modal-content { padding: 20px; margin: 10px; }
+            .sidebar { width: 85%; max-width: 300px; }
+            .media-grid-item { width: 100%; }
+            .result-label { width: 80px; }
+            .chart-tab { min-width: 60px; font-size: 10px; padding: 6px 10px; }
+            .monitoring-stats { grid-template-columns: 1fr 1fr; }
+            .monitoring-stat.full-width { grid-column: span 1; }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ===== LOADING SPINNER GLOBAL ===== */
+        .spinner-small { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #6c63ff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .spinner-small.white { border-color: rgba(255,255,255,0.3); border-top-color: #fff; }
     </style>
 </head>
 <body>
@@ -328,13 +372,20 @@
             <div class="header-actions">
                 <button class="header-btn active" id="voiceToggleMain" title="Activer/Désactiver la voix">🔊</button>
                 <button class="header-btn" id="stopSpeakingBtn" style="display:none;background:#fef2f2;" title="Arrêter la parole">⏹</button>
-                <button class="header-btn" id="presentationBtn" style="background:#f0f9ff;" title="Mode Présentation">📺</button>
+                
+                <!-- Alertes -->
                 <button class="header-btn alert-badge" id="alertBtn" style="background:#fef3c7;" title="Alertes">
                     🔔
                     <span class="badge-count" id="alertBadge" style="display:none;">0</span>
                 </button>
+                <!-- Indicateurs -->
                 <button class="header-btn" id="indicatorsBtn" style="background:#f0f9ff;" title="Indicateurs">📊</button>
-                <button class="header-btn danger" id="logoutMainBtn">🔓</button>
+                <!-- Surveillance des bases -->
+                <button class="header-btn" id="monitoringBtn" style="background:#f0f9ff;" title="Surveillance des bases">🗄️</button>
+                <!-- Modifier les accès -->
+                <button class="header-btn" id="credentialsBtn" style="background:#ede9fe;" title="Modifier mes accès">👤</button>
+                <!-- Déconnexion -->
+                <button hidden class="header-btn danger" id="logoutMainBtn">🔓</button>
             </div>
         </div>
 
@@ -347,7 +398,7 @@
             <!-- Status bars -->
             <div id="loadingBar" class="status-bar" style="display:none;">
                 <div class="status-icon">E</div>
-                <div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>
+                <div class="spinner-small"></div>
                 <span class="status-text">Eric traite votre demande...</span>
             </div>
             <div id="speakingBar" class="status-bar speaking" style="display:none;">
@@ -368,6 +419,80 @@
                     <button class="send-btn" id="sendBtn" disabled>➤</button>
                 </div>
                 <div class="disclaimer">🔒 Eric peut faire des erreurs. Vérifiez les informations importantes.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ÉCRAN DE SURVEILLANCE ===== -->
+    <div id="monitoringScreen" style="display:none;flex-direction:column;height:100vh;background:#0a0a1a;">
+        <div class="app-header" style="background:#0a0a1a;border-bottom-color:rgba(255,255,255,0.1);">
+            <button class="header-btn" id="backFromMonitoring" style="background:#f1f5f9;width:auto;padding:6px 12px;border-radius:8px;font-size:13px;color:#6c63ff;font-weight:600;">
+                ← Bases
+            </button>
+            <div style="flex:1;margin:0 8px;min-width:0;">
+                <div class="app-brand" style="font-size:12px;color:#ffffff;" id="monitoringBaseName">Base</div>
+                <div style="font-size:10px;color:#6b7280;" id="monitoringBaseInfo">Surveillance</div>
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" id="monitoringCloseBtn" style="background:#fef2f2;" title="Fermer">✕</button>
+            </div>
+        </div>
+        <div class="monitoring-container" id="monitoringContainer">
+            <div class="monitoring-header">
+                <div class="monitoring-title">🗄️ Surveillance des bases</div>
+                <div class="monitoring-subtitle" id="monitoringSubtitle">Base • Surveillance arrêtée</div>
+                <div class="monitoring-status inactive" id="monitoringStatusText">⏸ Arrêtée</div>
+            </div>
+
+            <div class="monitoring-controls">
+                <button class="monitoring-btn start" id="monitoringStartBtn">▶️ Démarrer</button>
+                <button class="monitoring-btn stop" id="monitoringStopBtn" disabled>⏹ Arrêter</button>
+                <button class="monitoring-btn refresh" id="monitoringRefreshBtn">🔄 Rafraîchir</button>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="monitoring-stats" id="monitoringStats">
+                <div class="monitoring-stat">
+                    <div class="monitoring-stat-label">🔌 Connexions</div>
+                    <div class="monitoring-stat-value" id="statConnections">0</div>
+                </div>
+                <div class="monitoring-stat">
+                    <div class="monitoring-stat-label">📋 Tables</div>
+                    <div class="monitoring-stat-value" id="statTables">0</div>
+                </div>
+                <div class="monitoring-stat">
+                    <div class="monitoring-stat-label">📝 Colonnes</div>
+                    <div class="monitoring-stat-value" id="statColumns">0</div>
+                </div>
+                <div class="monitoring-stat">
+                    <div class="monitoring-stat-label">📊 Enregistrements</div>
+                    <div class="monitoring-stat-value" id="statRows">0</div>
+                </div>
+                <div class="monitoring-stat full-width">
+                    <div class="monitoring-stat-label">💾 Taille totale</div>
+                    <div class="monitoring-stat-value" id="statSize">0 Mo</div>
+                </div>
+            </div>
+
+            <!-- Alertes de taille -->
+            <div class="monitoring-alerts" id="monitoringAlerts" style="display:none;">
+                <div class="monitoring-alerts-title">🚨 Alertes taille (>100 Mo)</div>
+                <div id="monitoringAlertList"></div>
+            </div>
+
+            <!-- Liste des tables -->
+            <div class="monitoring-tables">
+                <div class="monitoring-tables-title">📋 Détail des tables</div>
+                <div id="monitoringTableList">
+                    <div class="monitoring-empty">Aucune table trouvée</div>
+                </div>
+            </div>
+
+            <div class="monitoring-footer">
+                <div class="monitoring-footer-text" id="monitoringFooter">
+                    ⏸ Surveillance en pause
+                    <div class="last-update" id="monitoringLastUpdate">Dernière mise à jour: --:--:--</div>
+                </div>
             </div>
         </div>
     </div>
@@ -421,6 +546,34 @@
         </div>
     </div>
 
+    <!-- ===== MODAL MODIFICATION DES ACCÈS ===== -->
+    <div id="credentialsModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="max-width:400px;">
+            <div class="modal-icon">🔐</div>
+            <div class="modal-title">Modifier mes accès</div>
+            <div class="modal-subtitle">Modifiez votre login et/ou mot de passe</div>
+            <div class="credentials-fields">
+                <div class="input-group-custom">
+                    <span class="input-icon">👤</span>
+                    <input type="text" id="newLogin" placeholder="Nouveau login *" autocomplete="username">
+                </div>
+                <div class="input-group-custom">
+                    <span class="input-icon">🔒</span>
+                    <input type="password" id="newPassword" placeholder="Nouveau mot de passe (optionnel)" autocomplete="new-password">
+                    <button class="toggle-pwd" id="toggleNewPwd">👁️</button>
+                </div>
+                <div class="input-group-custom">
+                    <span class="input-icon">✓</span>
+                    <input type="password" id="confirmPassword" placeholder="Confirmer le mot de passe" autocomplete="new-password">
+                    <button class="toggle-pwd" id="toggleConfirmPwd">👁️</button>
+                </div>
+                <div class="credentials-hint">Laissez le mot de passe vide pour le conserver inchangé.</div>
+                <button class="btn-primary" id="updateCredentialsBtn">💾 Mettre à jour</button>
+            </div>
+            <button class="btn-close-modal" id="credentialsCloseBtn">Annuler</button>
+        </div>
+    </div>
+
     <!-- ===== MODAL ALERTES ===== -->
     <div id="alertModal" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="max-width:420px;">
@@ -442,10 +595,10 @@
             <div class="modal-subtitle" id="thresholdName">Indicateur</div>
             <div style="display:flex;gap:12px;margin-bottom:16px;">
                 <div class="form-group" style="flex:1;margin-bottom:0;">
-                    <input class="form-control" id="thresholdMin" placeholder="Seuil Min" type="number">
+                    <input class="form-control" id="thresholdMin" placeholder="Seuil Min" type="number" step="any">
                 </div>
                 <div class="form-group" style="flex:1;margin-bottom:0;">
-                    <input class="form-control" id="thresholdMax" placeholder="Seuil Max" type="number">
+                    <input class="form-control" id="thresholdMax" placeholder="Seuil Max" type="number" step="any">
                 </div>
             </div>
             <div style="font-size:12px;color:#64748b;text-align:center;margin-bottom:16px;">Laissez un champ vide pour ignorer ce seuil.</div>
@@ -468,7 +621,7 @@
             </div>
             <div style="background:#0f172a;border-radius:10px;padding:12px;margin-bottom:16px;">
                 <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;margin-bottom:6px;">Requête SQL :</div>
-                <div style="font-family:monospace;font-size:11px;color:#a5f3fc;line-height:1.6;max-height:100px;overflow-y:auto;" id="saveIndSql"></div>
+                <div style="font-family:monospace;font-size:11px;color:#a5f3fc;line-height:1.6;max-height:100px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" id="saveIndSql"></div>
             </div>
             <button class="btn-primary" id="saveIndBtn">💾 Sauvegarder</button>
             <button class="btn-close-modal" id="saveIndCloseBtn">Annuler</button>
@@ -487,30 +640,6 @@
             <input id="sidebarSearch" placeholder="Rechercher...">
         </div>
         <div id="indicatorsList"></div>
-    </div>
-
-    <!-- ===== MODE PRÉSENTATION ===== -->
-    <div id="presentationMode" style="display:none;flex:1;background:#0a0a1a;padding:20px;flex-direction:column;">
-        <div class="presentation-header">
-            <span class="presentation-title">📺 Mode Présentation</span>
-            <button class="presentation-close" id="presentationClose">✕ Fermer</button>
-        </div>
-        <div id="presentationEmpty" style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:30px;">
-            <div style="font-size:20px;font-weight:700;color:#ffffff;margin-bottom:8px;text-align:center;">Aucun indicateur disponible</div>
-            <div style="font-size:14px;color:#94a3b8;text-align:center;">Créez des indicateurs pour utiliser le mode présentation</div>
-        </div>
-        <div id="presentationContent" style="display:none;flex:1;flex-direction:column;">
-            <div class="presentation-nav">
-                <button id="presentationPrev">◀</button>
-                <span class="presentation-counter" id="presentationCounter">1 / 1</span>
-                <button id="presentationNext">▶</button>
-            </div>
-            <div class="presentation-content">
-                <div class="presentation-indicator-name" id="presentationIndName">Indicateur</div>
-                <div class="presentation-indicator-desc" id="presentationIndDesc"></div>
-            </div>
-            <div class="presentation-messages" id="presentationMessages"></div>
-        </div>
     </div>
 
     <!-- ===== MODAL IMAGE/VIDÉO PLEIN ÉCRAN ===== -->
@@ -536,22 +665,25 @@
                 <button style="width:36px;height:36px;border-radius:50%;background:#fef2f2;border:none;font-size:18px;color:#ef4444;font-weight:bold;cursor:pointer;" id="chartModalClose">✕</button>
             </div>
             <div style="padding:20px;overflow-y:auto;max-height:600px;display:flex;align-items:center;justify-content:center;" id="chartModalContent">
-                <div style="text-align:center;color:#94a3b8;">Graphique agrandi</div>
+                <canvas id="expandedChart" style="max-width:100%;max-height:500px;"></canvas>
             </div>
         </div>
     </div>
+
+    <!-- ===== TOAST CONTAINER ===== -->
+    <div id="toastContainer"></div>
 </div>
 
 <!-- ===== SCRIPTS ===== -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ================================================================
-// APPLICATION ERIC IA - VERSION WEB
+// APPLICATION ERIC IA - VERSION WEB (ADAPTÉE AU CODE REACT NATIVE)
 // ================================================================
 
 class EricApp {
     constructor() {
-        // ===== ÉTATS =====
+        // ===== ÉTATS (correspondent au code React Native) =====
         this.state = {
             isLoggedIn: false,
             user: null,
@@ -571,19 +703,31 @@ class EricApp {
             alertThresholds: {},
             webViewErrors: {},
             isSidebarVisible: false,
-            isPresentationMode: false,
-            presentationIndex: 0,
-            chartData: null,
+            chartInstances: {},
             expandedChart: null,
             selectedMedia: null,
             mediaModalVisible: false,
             isSavingIndicator: false,
-            chartInstances: {}
+            // Surveillance
+            isMonitoringMode: false,
+            monitoringData: [],
+            isMonitoring: false,
+            monitoringInterval: null,
+            monitoringStatus: 'arrêté',
+            dbStats: {
+                connections: 0,
+                tables: [],
+                totalColumns: 0,
+                totalRows: 0,
+                totalSize: '0 Mo',
+                alerts: []
+            }
         };
 
         // ===== RÉFÉRENCES =====
         this.speechSynth = window.speechSynthesis;
         this.recognition = null;
+        this.monitoringIntervalId = null;
 
         // ===== INIT =====
         this.init();
@@ -596,6 +740,7 @@ class EricApp {
         this.loadState();
         this.setupEventListeners();
         this.checkLoginStatus();
+        this.setupMonitoringListeners();
     }
 
     // ================================================================
@@ -632,7 +777,7 @@ class EricApp {
         document.getElementById('loginBtn').addEventListener('click', () => this.handleLogin());
         document.getElementById('loginInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') this.handleLogin(); });
         document.getElementById('passwordInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') this.handleLogin(); });
-        document.getElementById('togglePwd').addEventListener('click', () => this.togglePasswordVisibility());
+        document.getElementById('togglePwd').addEventListener('click', () => this.togglePasswordVisibility('passwordInput', 'togglePwd'));
         document.getElementById('forgotBtn').addEventListener('click', () => this.openForgotModal());
 
         // Auth modal
@@ -645,12 +790,27 @@ class EricApp {
         document.getElementById('resetBtn').addEventListener('click', () => this.handleResetPassword());
         document.getElementById('resetEmail').addEventListener('keypress', (e) => { if (e.key === 'Enter') this.handleResetPassword(); });
 
+        // Credentials modal
+        document.getElementById('credentialsBtn').addEventListener('click', () => this.openCredentialsModal());
+        document.getElementById('credentialsCloseBtn').addEventListener('click', () => this.closeCredentialsModal());
+        document.getElementById('updateCredentialsBtn').addEventListener('click', () => this.handleUpdateCredentials());
+        document.getElementById('toggleNewPwd').addEventListener('click', () => this.togglePasswordVisibility('newPassword', 'toggleNewPwd'));
+        document.getElementById('toggleConfirmPwd').addEventListener('click', () => this.togglePasswordVisibility('confirmPassword', 'toggleConfirmPwd'));
+
         // Logout
         document.getElementById('logoutBaseBtn').addEventListener('click', () => this.handleLogout());
         document.getElementById('logoutMainBtn').addEventListener('click', () => this.handleLogout());
 
         // Bases
         document.getElementById('backToBases').addEventListener('click', () => this.goBackToBases());
+
+        // Monitoring
+        document.getElementById('monitoringBtn').addEventListener('click', () => this.toggleMonitoring());
+        document.getElementById('backFromMonitoring').addEventListener('click', () => this.closeMonitoring());
+        document.getElementById('monitoringCloseBtn').addEventListener('click', () => this.closeMonitoring());
+        document.getElementById('monitoringStartBtn').addEventListener('click', () => this.startMonitoring());
+        document.getElementById('monitoringStopBtn').addEventListener('click', () => this.stopMonitoring());
+        document.getElementById('monitoringRefreshBtn').addEventListener('click', () => this.fetchDatabaseStats());
 
         // Chat
         document.getElementById('sendBtn').addEventListener('click', () => this.handleSend());
@@ -680,12 +840,6 @@ class EricApp {
         document.getElementById('alertBtn').addEventListener('click', () => this.openAlertModal());
         document.getElementById('alertCloseBtn').addEventListener('click', () => this.closeAlertModal());
 
-        // Presentation
-        document.getElementById('presentationBtn').addEventListener('click', () => this.togglePresentation());
-        document.getElementById('presentationClose').addEventListener('click', () => this.togglePresentation());
-        document.getElementById('presentationPrev').addEventListener('click', () => this.prevPresentationSlide());
-        document.getElementById('presentationNext').addEventListener('click', () => this.nextPresentationSlide());
-
         // Threshold modal
         document.getElementById('thresholdCloseBtn').addEventListener('click', () => this.closeThresholdModal());
         document.getElementById('thresholdSaveBtn').addEventListener('click', () => this.saveThreshold());
@@ -704,20 +858,25 @@ class EricApp {
         window.addEventListener('resize', () => this.handleResize());
     }
 
+    setupMonitoringListeners() {
+        // Les événements de monitoring sont déjà configurés ci-dessus
+    }
+
     // ================================================================
-    // AUTHENTIFICATION
+    // AUTHENTIFICATION (identique au code React Native)
     // ================================================================
     async handleLogin() {
         const login = document.getElementById('loginInput').value.trim();
         const mdp = document.getElementById('passwordInput').value.trim();
 
         if (!login || !mdp) {
-            this.showToast('Erreur', 'Veuillez remplir le login et le mot de passe.');
+            this.showToast('Erreur', 'Veuillez remplir le login et le mot de passe.', 'error');
             return;
         }
 
-        document.getElementById('loginBtn').disabled = true;
-        document.getElementById('loginBtn').innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div>';
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-small white"></span>';
 
         try {
             const res = await fetch('https://cyberic.xyz/api/ia-base.php', {
@@ -728,7 +887,7 @@ class EricApp {
             const data = await res.json();
 
             if (data.error) {
-                this.showToast('Erreur de connexion', data.error);
+                this.showToast('Erreur de connexion', data.error, 'error');
             } else if (data.success && data.user) {
                 this.state.user = data.user;
                 this.state.isLoggedIn = true;
@@ -737,10 +896,10 @@ class EricApp {
                 this.showScreen('bases');
             }
         } catch (e) {
-            this.showToast('Erreur réseau', 'Impossible de se connecter au serveur.');
+            this.showToast('Erreur réseau', 'Impossible de se connecter au serveur.', 'error');
         } finally {
-            document.getElementById('loginBtn').disabled = false;
-            document.getElementById('loginBtn').textContent = 'Se connecter';
+            btn.disabled = false;
+            btn.textContent = 'Se connecter';
         }
     }
 
@@ -753,14 +912,268 @@ class EricApp {
             });
             const data = await res.json();
             if (data.error) {
-                this.showToast('Erreur', data.error);
+                this.showToast('Erreur', data.error, 'error');
             } else {
                 this.state.bases = data.bases || [];
                 this.renderBases();
             }
         } catch (e) {
-            this.showToast('Erreur réseau', 'Impossible de charger les bases.');
+            this.showToast('Erreur réseau', 'Impossible de charger les bases.', 'error');
         }
+    }
+
+    // ================================================================
+    // GESTION DES ACCÈS (MODIFICATION)
+    // ================================================================
+    openCredentialsModal() {
+        if (this.state.isSpeaking) this.stopSpeaking();
+        document.getElementById('newLogin').value = this.state.user?.login || '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('credentialsModal').style.display = 'flex';
+    }
+
+    closeCredentialsModal() {
+        document.getElementById('credentialsModal').style.display = 'none';
+    }
+
+    async handleUpdateCredentials() {
+        const login = document.getElementById('newLogin').value.trim();
+        const password = document.getElementById('newPassword').value.trim();
+        const confirm = document.getElementById('confirmPassword').value.trim();
+
+        if (!login) {
+            this.showToast('Erreur', 'Le login est obligatoire.', 'error');
+            return;
+        }
+
+        if (password && password !== confirm) {
+            this.showToast('Erreur', 'Les mots de passe ne correspondent pas.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('updateCredentialsBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-small white"></span>';
+
+        try {
+            const res = await fetch('https://cyberic.xyz/api/ia-base.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_credentials',
+                    user_id: this.state.user.id,
+                    login: login,
+                    password: password || undefined
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                this.state.user.login = login;
+                this.showToast('Succès', 'Vos accès ont été modifiés avec succès.', 'success');
+                this.closeCredentialsModal();
+                this.speak('Vos accès ont été modifiés.');
+            } else {
+                this.showToast('Erreur', data.error || 'Impossible de modifier les accès.', 'error');
+            }
+        } catch (e) {
+            this.showToast('Erreur réseau', 'Impossible de communiquer avec le serveur.', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Mettre à jour';
+        }
+    }
+
+    // ================================================================
+    // SURVEILLANCE DES BASES DE DONNÉES
+    // ================================================================
+    toggleMonitoring() {
+        if (this.state.isSpeaking) this.stopSpeaking();
+        
+        if (this.state.isMonitoringMode) {
+            this.closeMonitoring();
+        } else {
+            this.openMonitoring();
+        }
+    }
+
+    openMonitoring() {
+        if (!this.state.selectedBase || !this.state.user) {
+            this.showToast('Erreur', 'Aucune base sélectionnée.', 'error');
+            return;
+        }
+
+        this.state.isMonitoringMode = true;
+        document.getElementById('monitoringScreen').style.display = 'flex';
+        document.getElementById('mainScreen').style.display = 'none';
+        
+        document.getElementById('monitoringBaseName').textContent = this.state.selectedBase.nom_base;
+        document.getElementById('monitoringSubtitle').textContent = `${this.state.selectedBase.nom_base} • Surveillance arrêtée`;
+        
+        // Réinitialiser les stats
+        this.state.dbStats = { connections: 0, tables: [], totalColumns: 0, totalRows: 0, totalSize: '0 Mo', alerts: [] };
+        this.updateMonitoringUI();
+        
+        this.speak(`Surveillance de la base ${this.state.selectedBase.nom_base} ouverte`);
+    }
+
+    closeMonitoring() {
+        this.stopMonitoring();
+        this.state.isMonitoringMode = false;
+        document.getElementById('monitoringScreen').style.display = 'none';
+        document.getElementById('mainScreen').style.display = 'flex';
+        if (this.monitoringIntervalId) {
+            clearInterval(this.monitoringIntervalId);
+            this.monitoringIntervalId = null;
+        }
+    }
+
+    async startMonitoring() {
+        if (!this.state.selectedBase || !this.state.user) {
+            this.showToast('Erreur', 'Aucune base sélectionnée.', 'error');
+            return;
+        }
+
+        this.state.isMonitoring = true;
+        this.state.monitoringStatus = 'en cours';
+        
+        document.getElementById('monitoringStartBtn').disabled = true;
+        document.getElementById('monitoringStopBtn').disabled = false;
+        document.getElementById('monitoringStatusText').className = 'monitoring-status active';
+        document.getElementById('monitoringStatusText').textContent = '🟢 En cours';
+        document.getElementById('monitoringSubtitle').textContent = `${this.state.selectedBase.nom_base} • Surveillance active`;
+        document.getElementById('monitoringFooter').innerHTML = '🟢 Surveillance active - Mise à jour toutes les 30s';
+
+        // Exécuter immédiatement
+        await this.fetchDatabaseStats();
+
+        // Intervalle toutes les 30 secondes
+        if (this.monitoringIntervalId) {
+            clearInterval(this.monitoringIntervalId);
+        }
+        this.monitoringIntervalId = setInterval(() => this.fetchDatabaseStats(), 30000);
+        
+        this.speak(`Surveillance de la base ${this.state.selectedBase.nom_base} activée`);
+    }
+
+    stopMonitoring() {
+        this.state.isMonitoring = false;
+        this.state.monitoringStatus = 'arrêté';
+        
+        if (this.monitoringIntervalId) {
+            clearInterval(this.monitoringIntervalId);
+            this.monitoringIntervalId = null;
+        }
+        
+        document.getElementById('monitoringStartBtn').disabled = false;
+        document.getElementById('monitoringStopBtn').disabled = true;
+        document.getElementById('monitoringStatusText').className = 'monitoring-status inactive';
+        document.getElementById('monitoringStatusText').textContent = '⏸ Arrêtée';
+        document.getElementById('monitoringSubtitle').textContent = `${this.state.selectedBase?.nom_base || 'Base'} • Surveillance arrêtée`;
+        document.getElementById('monitoringFooter').innerHTML = '⏸ Surveillance en pause';
+        
+        this.speak('Surveillance arrêtée');
+    }
+
+    async fetchDatabaseStats() {
+        if (!this.state.selectedBase || !this.state.user) return;
+
+        try {
+            const res = await fetch('https://cyberic.xyz/api/ia-base.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'monitoring',
+                    user_id: this.state.user.id,
+                    base_id: this.state.selectedBase.base_id,
+                    monitoring_action: 'stats'
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                this.state.dbStats = {
+                    connections: data.connections || 0,
+                    tables: data.tables || [],
+                    totalColumns: data.total_columns || 0,
+                    totalRows: data.total_rows || 0,
+                    totalSize: data.total_size || '0 Mo',
+                    alerts: data.alerts || []
+                };
+                this.updateMonitoringUI();
+
+                // Alertes de taille
+                if (this.state.dbStats.alerts && this.state.dbStats.alerts.length > 0) {
+                    this.state.dbStats.alerts.forEach(alert => {
+                        const msg = `🚨 ${alert.table}: ${alert.message}`;
+                        this.showToast('🚨 Alerte taille', msg, 'error');
+                        if (this.state.autoSpeak) {
+                            this.speak(`Alerte ${alert.table}: ${alert.message}`);
+                        }
+                    });
+                }
+            } else {
+                console.error('Erreur monitoring:', data.error);
+            }
+        } catch (e) {
+            console.error('Erreur fetch monitoring:', e);
+        }
+    }
+
+    updateMonitoringUI() {
+        const stats = this.state.dbStats;
+        
+        document.getElementById('statConnections').textContent = stats.connections;
+        document.getElementById('statTables').textContent = stats.tables.length;
+        document.getElementById('statColumns').textContent = stats.totalColumns;
+        document.getElementById('statRows').textContent = stats.totalRows.toLocaleString();
+        
+        const sizeEl = document.getElementById('statSize');
+        sizeEl.textContent = stats.totalSize;
+        if (stats.totalSize && parseFloat(stats.totalSize) > 100) {
+            sizeEl.className = 'monitoring-stat-value danger';
+        } else {
+            sizeEl.className = 'monitoring-stat-value';
+        }
+
+        // Alertes
+        const alertsContainer = document.getElementById('monitoringAlerts');
+        const alertList = document.getElementById('monitoringAlertList');
+        if (stats.alerts && stats.alerts.length > 0) {
+            alertsContainer.style.display = 'block';
+            alertList.innerHTML = stats.alerts.map(a => `
+                <div class="monitoring-alert-item">
+                    <div class="monitoring-alert-text">📊 ${a.table}: ${a.message}</div>
+                </div>
+            `).join('');
+        } else {
+            alertsContainer.style.display = 'none';
+        }
+
+        // Tables
+        const tableList = document.getElementById('monitoringTableList');
+        if (stats.tables && stats.tables.length > 0) {
+            tableList.innerHTML = stats.tables.map(t => `
+                <div class="monitoring-table-item">
+                    <div class="monitoring-table-header">
+                        <span class="monitoring-table-name">📊 ${t.name}</span>
+                        <span class="monitoring-table-rows">${(t.rows || 0).toLocaleString()} lignes</span>
+                    </div>
+                    <div class="monitoring-table-details">
+                        <span class="monitoring-table-detail">Colonnes: ${t.columns || 0}</span>
+                        <span class="monitoring-table-detail ${t.size && parseFloat(t.size) > 100 ? 'danger' : ''}">
+                            Taille: ${t.size || '0 Mo'}${t.size && parseFloat(t.size) > 100 ? ' ⚠️' : ''}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            tableList.innerHTML = '<div class="monitoring-empty">Aucune table trouvée</div>';
+        }
+
+        // Last update
+        document.getElementById('monitoringLastUpdate').textContent = `Dernière mise à jour: ${new Date().toLocaleTimeString()}`;
     }
 
     // ================================================================
@@ -808,12 +1221,13 @@ class EricApp {
         const mdp = document.getElementById('authPassword').value.trim();
 
         if (!login || !mdp) {
-            this.showToast('Erreur', 'Login et mot de passe requis');
+            this.showToast('Erreur', 'Login et mot de passe requis', 'error');
             return;
         }
 
-        document.getElementById('authBtn').disabled = true;
-        document.getElementById('authBtn').innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div>';
+        const btn = document.getElementById('authBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-small white"></span>';
 
         try {
             let payload = { action: this.state.isRegisterMode ? 'register' : 'login', login, mdp };
@@ -832,10 +1246,10 @@ class EricApp {
             const data = await res.json();
 
             if (data.error) {
-                this.showToast('Erreur', data.error);
+                this.showToast('Erreur', data.error, 'error');
             } else if (data.success) {
                 if (this.state.isRegisterMode) {
-                    this.showToast('Succès', 'Compte créé ! Connectez-vous.');
+                    this.showToast('Succès', 'Compte créé ! Connectez-vous.', 'success');
                     this.toggleAuthMode();
                 } else {
                     this.state.user = data.user;
@@ -847,10 +1261,10 @@ class EricApp {
                 }
             }
         } catch (e) {
-            this.showToast('Erreur réseau', 'Impossible de contacter le serveur.');
+            this.showToast('Erreur réseau', 'Impossible de contacter le serveur.', 'error');
         } finally {
-            document.getElementById('authBtn').disabled = false;
-            document.getElementById('authBtn').textContent = this.state.isRegisterMode ? 'S\'inscrire' : 'Se connecter';
+            btn.disabled = false;
+            btn.textContent = this.state.isRegisterMode ? 'S\'inscrire' : 'Se connecter';
         }
     }
 
@@ -877,8 +1291,9 @@ class EricApp {
             return;
         }
 
-        document.getElementById('resetBtn').disabled = true;
-        document.getElementById('resetBtn').innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div>';
+        const btn = document.getElementById('resetBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-small white"></span>';
 
         try {
             const res = await fetch('https://cyberic.xyz/api/retrouve-acces.php', {
@@ -900,8 +1315,8 @@ class EricApp {
             document.getElementById('forgotError').textContent = 'Erreur de connexion au serveur.';
             document.getElementById('forgotError').style.display = 'block';
         } finally {
-            document.getElementById('resetBtn').disabled = false;
-            document.getElementById('resetBtn').textContent = 'Envoyer mes accès';
+            btn.disabled = false;
+            btn.textContent = 'Envoyer mes accès';
         }
     }
 
@@ -912,10 +1327,12 @@ class EricApp {
         const loginScreen = document.getElementById('loginScreen');
         const basesScreen = document.getElementById('basesScreen');
         const mainScreen = document.getElementById('mainScreen');
+        const monitoringScreen = document.getElementById('monitoringScreen');
 
         loginScreen.style.display = 'none';
         basesScreen.style.display = 'none';
         mainScreen.style.display = 'none';
+        monitoringScreen.style.display = 'none';
 
         if (screen === 'login') {
             loginScreen.style.display = 'flex';
@@ -934,11 +1351,13 @@ class EricApp {
     }
 
     goBackToBases() {
+        if (this.state.isMonitoringMode) {
+            this.closeMonitoring();
+        }
         this.state.selectedBase = null;
         this.state.messages = [];
         this.state.indicators = [];
-        this.state.isPresentationMode = false;
-        document.getElementById('presentationMode').style.display = 'none';
+        document.getElementById('monitoringScreen').style.display = 'none';
         this.showScreen('bases');
     }
 
@@ -1000,14 +1419,17 @@ class EricApp {
     // SÉLECTION D'UNE BASE
     // ================================================================
     async selectBase(base) {
+        if (this.state.isSpeaking) this.stopSpeaking();
+        if (this.state.isMonitoringMode) {
+            this.closeMonitoring();
+        }
+        
         this.state.selectedBase = base;
         this.state.messages = [];
         this.state.indicators = [];
         this.state.editingIndex = null;
         document.getElementById('messageInput').value = '';
         this.state.inputText = '';
-
-        if (this.state.isPresentationMode) this.togglePresentation();
 
         try {
             const res = await fetch('https://cyberic.xyz/api/ia-base.php', {
@@ -1024,10 +1446,11 @@ class EricApp {
         this.speak(`Base sélectionnée: ${base.nom_base}`);
         this.showScreen('main');
         this.renderWelcome();
+        this.updateAlertBadge();
     }
 
     // ================================================================
-    // MESSAGES
+    // MESSAGES (identique au code React Native)
     // ================================================================
     renderWelcome() {
         const container = document.getElementById('messagesContainer');
@@ -1103,7 +1526,6 @@ class EricApp {
         // Événements pour les boutons "Voir plus"
         container.querySelectorAll('.see-more-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const msgIdx = parseInt(btn.dataset.msgIndex);
                 this.state.displayLimit += 50;
                 this.renderMessages();
             });
@@ -1141,11 +1563,14 @@ class EricApp {
         }
 
         if (msg.content) {
+            const isAlert = msg.isAlert || false;
+            const style = isAlert ? 'background:#fef2f2;border:1px solid #fecaca;' : 'background:#f8fafc;';
+            const color = isAlert ? '#b91c1c;' : '#1e293b;';
             return `
                 <div class="message assistant">
-                    <div class="message-avatar">E</div>
-                    <div class="message-bubble" style="background:#f8fafc;">
-                        <div>${this.escapeHtml(msg.content)}</div>
+                    <div class="message-avatar" style="${isAlert ? 'background:#ef4444;' : ''}">${isAlert ? '🚨' : 'E'}</div>
+                    <div class="message-bubble" style="${style}">
+                        <div style="color:${color}">${this.escapeHtml(msg.content)}</div>
                         <button class="speak-btn" data-text="${this.escapeHtml(msg.content)}">🔊 Écouter</button>
                     </div>
                 </div>
@@ -1290,31 +1715,17 @@ class EricApp {
         }
 
         if (viewMode === 'maps' && media.coordinates.length > 0) {
-            return media.coordinates.map((coord, idx) => {
-                const mapId = `map-${index}-${idx}`;
-                const errorKey = `map-${index}-${idx}`;
-                if (this.state.webViewErrors[errorKey]) {
-                    return `
-                        <div class="media-card error">
-                            <div class="media-card-title" style="color:#dc2626;">⚠️ Carte non disponible</div>
-                            <div class="media-card-sub">${coord.name}</div>
-                            <button class="media-btn" onclick="app.retryMedia('${errorKey}')">🔄 Réessayer</button>
-                        </div>
-                    `;
-                }
-                return `
-                    <div class="media-card">
-                        <div class="media-card-title">📍 ${coord.name}</div>
-                        <div class="media-card-sub">Lat: ${coord.lat}, Lon: ${coord.lon}</div>
-                        <div class="webview-container" id="${mapId}">
-                            <div class="webview-loading">
-                                <div class="spinner"></div>
-                                <div class="loading-text">Chargement de la carte...</div>
-                            </div>
-                        </div>
+            // Les cartes nécessitent Leaflet, on affiche un placeholder
+            return media.coordinates.map((coord, idx) => `
+                <div class="media-card">
+                    <div class="media-card-title">📍 ${coord.name}</div>
+                    <div class="media-card-sub">Lat: ${coord.lat}, Lon: ${coord.lon}</div>
+                    <div class="webview-container" style="height:200px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;">
+                        🗺️ Carte: ${coord.lat}, ${coord.lon}
+                        <br><small style="color:#64748b;">(Ouvrir dans Google Maps)</small>
                     </div>
-                `;
-            }).join('');
+                </div>
+            `).join('');
         }
 
         if (viewMode === 'images' && media.images.length > 0) {
@@ -1331,93 +1742,42 @@ class EricApp {
         }
 
         if (viewMode === 'videos' && media.videos.length > 0) {
-            return media.videos.map((video, idx) => {
-                const errorKey = `video-${index}-${idx}`;
-                if (this.state.webViewErrors[errorKey]) {
-                    return `
-                        <div class="media-card error">
-                            <div class="media-card-title" style="color:#dc2626;">⚠️ Vidéo non disponible</div>
-                            <div class="media-card-sub">${video.name}</div>
-                            <button class="media-btn" onclick="app.retryMedia('${errorKey}')">🔄 Réessayer</button>
-                        </div>
-                    `;
-                }
-                let embedUrl = video.uri;
-                if (video.isYouTube) {
-                    const match = video.uri.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^\s&?]+)/);
-                    if (match) embedUrl = `https://www.youtube.com/embed/${match[1]}`;
-                }
-                const videoId = `video-${index}-${idx}`;
-                return `
-                    <div class="media-card">
-                        <div class="media-card-title">🎬 ${video.name}</div>
-                        ${video.isYouTube ? '<div class="media-card-sub">📺 YouTube</div>' : ''}
-                        <div class="webview-container" id="${videoId}">
-                            <div class="webview-loading">
-                                <div class="spinner"></div>
-                                <div class="loading-text">Chargement de la vidéo...</div>
-                            </div>
-                        </div>
+            return media.videos.map((video, idx) => `
+                <div class="media-card">
+                    <div class="media-card-title">🎬 ${video.name}</div>
+                    ${video.isYouTube ? '<div class="media-card-sub">📺 YouTube</div>' : ''}
+                    <div class="webview-container" style="height:200px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;">
+                        🎬 ${video.isYouTube ? 'Vidéo YouTube' : 'Vidéo'}
+                        <br><small style="color:#64748b;">${video.uri}</small>
                     </div>
-                `;
-            }).join('');
+                </div>
+            `).join('');
         }
 
         if (viewMode === 'documents' && media.documents.length > 0) {
-            return media.documents.map((doc, idx) => {
-                const errorKey = `doc-${index}-${idx}`;
-                if (this.state.webViewErrors[errorKey]) {
-                    return `
-                        <div class="media-card error">
-                            <div class="media-card-title" style="color:#dc2626;">⚠️ Document non disponible</div>
-                            <div class="media-card-sub">${doc.name}</div>
-                            <button class="media-btn" onclick="app.retryMedia('${errorKey}')">🔄 Réessayer</button>
-                        </div>
-                    `;
-                }
-                const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.uri)}&embedded=true`;
-                const docId = `doc-${index}-${idx}`;
-                return `
-                    <div class="media-card">
-                        <div class="media-card-title">📄 ${doc.name}</div>
-                        <div class="media-card-sub">Type: ${doc.type.toUpperCase()}</div>
-                        <div class="webview-container" id="${docId}">
-                            <div class="webview-loading">
-                                <div class="spinner"></div>
-                                <div class="loading-text">Chargement du document...</div>
-                            </div>
-                        </div>
+            return media.documents.map((doc, idx) => `
+                <div class="media-card">
+                    <div class="media-card-title">📄 ${doc.name}</div>
+                    <div class="media-card-sub">Type: ${doc.type.toUpperCase()}</div>
+                    <div class="webview-container" style="height:200px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;">
+                        📄 Document ${doc.type}
+                        <br><small style="color:#64748b;">${doc.uri}</small>
                     </div>
-                `;
-            }).join('');
+                </div>
+            `).join('');
         }
 
         if (viewMode === 'pages' && media.pages.length > 0) {
-            return media.pages.map((page, idx) => {
-                const errorKey = `page-${index}-${idx}`;
-                if (this.state.webViewErrors[errorKey]) {
-                    return `
-                        <div class="media-card error">
-                            <div class="media-card-title" style="color:#dc2626;">⚠️ Page non disponible</div>
-                            <div class="media-card-sub">${page.name}</div>
-                            <button class="media-btn" onclick="app.retryMedia('${errorKey}')">🔄 Réessayer</button>
-                        </div>
-                    `;
-                }
-                const pageId = `page-${index}-${idx}`;
-                return `
-                    <div class="media-card">
-                        <div class="media-card-title">🌐 ${page.name}</div>
-                        <div class="media-card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${page.uri}</div>
-                        <div class="webview-container" id="${pageId}">
-                            <div class="webview-loading">
-                                <div class="spinner"></div>
-                                <div class="loading-text">Chargement de la page...</div>
-                            </div>
-                        </div>
+            return media.pages.map((page, idx) => `
+                <div class="media-card">
+                    <div class="media-card-title">🌐 ${page.name}</div>
+                    <div class="media-card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${page.uri}</div>
+                    <div class="webview-container" style="height:200px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;">
+                        🌐 Page Web
+                        <br><small style="color:#64748b;">${page.uri}</small>
                     </div>
-                `;
-            }).join('');
+                </div>
+            `).join('');
         }
 
         // Graphiques
@@ -1565,18 +1925,33 @@ class EricApp {
         const keys = Object.keys(results[0]);
         if (keys.length < 2) return null;
 
+        // Détection améliorée des colonnes
         let labelKey = null;
         let valueKey = null;
 
+        const datePatterns = ['annee', 'year', 'date', 'mois', 'month', 'jour', 'day', 'trimestre', 'quarter'];
+        const numericPatterns = ['nombre', 'count', 'total', 'sum', 'quantite', 'quantity', 'montant', 'amount', 'prix', 'price', 'valeur', 'value'];
+
         for (const key of keys) {
+            const keyLower = key.toLowerCase();
             const val = results[0][key];
             const isNumeric = !isNaN(parseFloat(val)) && isFinite(val);
-            if (isNumeric && !valueKey) valueKey = key;
-            else if (!isNumeric && !labelKey) labelKey = key;
+            const isDateLike = datePatterns.some(pattern => keyLower.includes(pattern));
+            const isNumericLike = numericPatterns.some(pattern => keyLower.includes(pattern));
+
+            if (isDateLike && !labelKey) {
+                labelKey = key;
+            } else if (isNumeric && isNumericLike && !valueKey) {
+                valueKey = key;
+            } else if (isNumeric && !valueKey && !labelKey) {
+                valueKey = key;
+            } else if (!isNumeric && !labelKey) {
+                labelKey = key;
+            }
         }
 
-        if (!labelKey) labelKey = keys.find(k => k !== valueKey) || keys[0];
-        if (!valueKey) valueKey = keys.find(k => k !== labelKey) || keys[1];
+        if (!labelKey) labelKey = keys.find(k => !isNaN(parseFloat(results[0][k])) === false) || keys[0];
+        if (!valueKey) valueKey = keys.find(k => isNaN(parseFloat(results[0][k])) === false) || keys[1];
 
         if (!valueKey || !labelKey) return null;
         if (isNaN(parseFloat(results[0][valueKey]))) return null;
@@ -1656,7 +2031,6 @@ class EricApp {
             'polarArea': '🎯 Graphique Polaire'
         };
         document.getElementById('chartModalTitle').textContent = modeNames[mode] || '📊 Graphique';
-        document.getElementById('chartModalCount').textContent = chartData.length + ' points de données';
 
         const canvas = document.getElementById('expandedChart');
         if (this.state.expandedChart) {
@@ -1784,7 +2158,7 @@ class EricApp {
         }
 
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            this.showToast('Non disponible', 'La reconnaissance vocale n\'est pas supportée par votre navigateur.');
+            this.showToast('Non disponible', 'La reconnaissance vocale n\'est pas supportée par votre navigateur.', 'error');
             return;
         }
 
@@ -1812,7 +2186,7 @@ class EricApp {
             this.state.recognizing = false;
             document.getElementById('voiceBtn').classList.remove('active');
             document.getElementById('voiceBtn').textContent = '🎤';
-            this.showToast('Erreur', 'Erreur de reconnaissance vocale: ' + event.error);
+            this.showToast('Erreur', 'Erreur de reconnaissance vocale: ' + event.error, 'error');
         };
 
         this.recognition.onend = () => {
@@ -1984,7 +2358,7 @@ class EricApp {
         const container = document.getElementById('indicatorsList');
 
         if (filtered.length === 0) {
-            container.innerHTML = '<div class="empty-sidebar" style="text-align:center;color:#94a3b8;padding:40px 0;">Aucun indicateur trouvé.</div>';
+            container.innerHTML = '<div class="empty-sidebar">Aucun indicateur trouvé.</div>';
             return;
         }
 
@@ -2020,17 +2394,17 @@ class EricApp {
             if (data.success) {
                 this.state.indicators = this.state.indicators.filter(ind => ind.indicateur_id !== indicateurId);
                 this.renderIndicators();
-                this.showToast('Succès', 'Indicateur supprimé.');
+                this.showToast('Succès', 'Indicateur supprimé.', 'success');
             } else {
-                this.showToast('Erreur', data.error || 'Impossible de supprimer.');
+                this.showToast('Erreur', data.error || 'Impossible de supprimer.', 'error');
             }
         } catch (e) {
-            this.showToast('Erreur réseau', 'Impossible de communiquer avec le serveur.');
+            this.showToast('Erreur réseau', 'Impossible de communiquer avec le serveur.', 'error');
         }
     }
 
     // ================================================================
-    // ALERTES
+    // ALERTES (indicateurs)
     // ================================================================
     checkAlerts(data, indicatorName, indicatorId) {
         const threshold = this.state.alertThresholds[indicatorId];
@@ -2061,7 +2435,7 @@ class EricApp {
         this.state.alerts = [newAlert, ...this.state.alerts];
         this.saveState();
         this.updateAlertBadge();
-        this.showToast(`🔴 Alerte ${indicatorName}`, `Valeur ${value} ${type === 'min' ? 'inférieure' : 'supérieure'} au seuil ${type === 'min' ? 'min' : 'max'} ${threshold}`);
+        this.showToast(`🔴 Alerte ${indicatorName}`, `Valeur ${value} ${type === 'min' ? 'inférieure' : 'supérieure'} au seuil ${type === 'min' ? 'min' : 'max'} ${threshold}`, 'error');
     }
 
     removeAlert(index) {
@@ -2144,7 +2518,7 @@ class EricApp {
         this.state.alertThresholds = newThresholds;
         this.saveState();
         this.closeThresholdModal();
-        this.showToast('Succès', `Seuils mis à jour pour "${this.state.currentThresholdIndicator.name}"`);
+        this.showToast('Succès', `Seuils mis à jour pour "${this.state.currentThresholdIndicator.name}"`, 'success');
     }
 
     // ================================================================
@@ -2167,12 +2541,13 @@ class EricApp {
         const sql = document.getElementById('saveIndSql').textContent;
 
         if (!name || !sql) {
-            this.showToast('Erreur', 'Le nom et la requête SQL sont obligatoires.');
+            this.showToast('Erreur', 'Le nom et la requête SQL sont obligatoires.', 'error');
             return;
         }
 
-        document.getElementById('saveIndBtn').disabled = true;
-        document.getElementById('saveIndBtn').innerHTML = '<div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto;"></div>';
+        const btn = document.getElementById('saveIndBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-small white"></span>';
 
         try {
             const res = await fetch('https://cyberic.xyz/api/ia-base.php', {
@@ -2190,7 +2565,7 @@ class EricApp {
             const data = await res.json();
 
             if (data.success) {
-                this.showToast('Succès', 'Indicateur sauvegardé avec succès.');
+                this.showToast('Succès', 'Indicateur sauvegardé avec succès.', 'success');
                 this.speak(`Indicateur ${name} sauvegardé.`);
                 this.closeSaveIndicatorModal();
 
@@ -2206,66 +2581,14 @@ class EricApp {
                 const dataInd = await resInd.json();
                 if (dataInd.success) this.state.indicators = dataInd.indicateurs || [];
             } else {
-                this.showToast('Erreur', data.error || 'Impossible de sauvegarder.');
+                this.showToast('Erreur', data.error || 'Impossible de sauvegarder.', 'error');
             }
         } catch (e) {
-            this.showToast('Erreur réseau', 'Impossible de sauvegarder l\'indicateur.');
+            this.showToast('Erreur réseau', 'Impossible de sauvegarder l\'indicateur.', 'error');
         } finally {
-            document.getElementById('saveIndBtn').disabled = false;
-            document.getElementById('saveIndBtn').textContent = '💾 Sauvegarder';
+            btn.disabled = false;
+            btn.textContent = '💾 Sauvegarder';
         }
-    }
-
-    // ================================================================
-    // MODE PRÉSENTATION
-    // ================================================================
-    togglePresentation() {
-        if (this.state.isSpeaking) this.stopSpeaking();
-
-        this.state.isPresentationMode = !this.state.isPresentationMode;
-        const container = document.getElementById('presentationMode');
-
-        if (this.state.isPresentationMode) {
-            container.style.display = 'flex';
-            this.state.presentationIndex = 0;
-            this.updatePresentation();
-        } else {
-            container.style.display = 'none';
-        }
-    }
-
-    updatePresentation() {
-        const indicators = this.state.indicators;
-        if (indicators.length === 0) {
-            document.getElementById('presentationEmpty').style.display = 'flex';
-            document.getElementById('presentationContent').style.display = 'none';
-            return;
-        }
-
-        document.getElementById('presentationEmpty').style.display = 'none';
-        document.getElementById('presentationContent').style.display = 'flex';
-
-        const idx = this.state.presentationIndex;
-        document.getElementById('presentationCounter').textContent = `${idx + 1} / ${indicators.length}`;
-        document.getElementById('presentationIndName').textContent = indicators[idx]?.nom || 'Aucun indicateur';
-        document.getElementById('presentationIndDesc').textContent = indicators[idx]?.description || '';
-
-        if (indicators[idx]) {
-            this.executeIndicator(indicators[idx]);
-        }
-    }
-
-    nextPresentationSlide() {
-        if (this.state.indicators.length === 0) return;
-        this.state.presentationIndex = (this.state.presentationIndex + 1) % this.state.indicators.length;
-        this.updatePresentation();
-    }
-
-    prevPresentationSlide() {
-        if (this.state.indicators.length === 0) return;
-        const prev = this.state.presentationIndex - 1;
-        this.state.presentationIndex = prev < 0 ? this.state.indicators.length - 1 : prev;
-        this.updatePresentation();
     }
 
     // ================================================================
@@ -2298,15 +2621,6 @@ class EricApp {
     }
 
     // ================================================================
-    // MÉDIAS (WEBVIEW)
-    // ================================================================
-    retryMedia(key) {
-        this.state.webViewErrors = { ...this.state.webViewErrors };
-        delete this.state.webViewErrors[key];
-        this.renderMessages();
-    }
-
-    // ================================================================
     // UTILITAIRES
     // ================================================================
     escapeHtml(text) {
@@ -2316,35 +2630,18 @@ class EricApp {
         return div.innerHTML;
     }
 
-    showToast(title, message) {
-        // Utiliser une notification simple
-        const container = document.getElementById('toastContainer') || document.createElement('div');
-        container.id = 'toastContainer';
-        container.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;max-width:350px;';
-        if (!document.getElementById('toastContainer')) {
-            document.body.appendChild(container);
-        }
-
+    showToast(title, message, type = 'info') {
+        const container = document.getElementById('toastContainer');
         const toast = document.createElement('div');
-        toast.style.cssText = `
-            background:#ffffff;
-            border-radius:12px;
-            padding:14px 18px;
-            box-shadow:0 10px 40px rgba(0,0,0,0.15);
-            margin-top:10px;
-            border-left:4px solid #6c63ff;
-            animation:slideInRight 0.3s ease;
-            display:flex;
-            align-items:flex-start;
-            gap:12px;
-        `;
+        toast.className = `toast-item ${type}`;
+        const icons = { info: 'ℹ️', error: '❌', success: '✅' };
         toast.innerHTML = `
-            <span style="font-size:20px;flex-shrink:0;">ℹ️</span>
+            <span style="font-size:20px;flex-shrink:0;">${icons[type] || 'ℹ️'}</span>
             <div style="flex:1;">
                 <div style="font-size:13px;font-weight:600;color:#1a1a2e;">${title}</div>
                 <div style="font-size:12px;color:#6b7280;">${message}</div>
             </div>
-            <button style="background:none;border:none;font-size:16px;color:#94a3b8;cursor:pointer;padding:0 4px;" onclick="this.parentElement.remove()">✕</button>
+            <button class="toast-close" onclick="this.closest('.toast-item').remove()">✕</button>
         `;
         container.appendChild(toast);
         setTimeout(() => {
@@ -2352,9 +2649,9 @@ class EricApp {
         }, 5000);
     }
 
-    togglePasswordVisibility() {
-        const pwd = document.getElementById('passwordInput');
-        const btn = document.getElementById('togglePwd');
+    togglePasswordVisibility(inputId, btnId) {
+        const pwd = document.getElementById(inputId);
+        const btn = document.getElementById(btnId);
         if (pwd.type === 'password') {
             pwd.type = 'text';
             btn.textContent = '🙈';
@@ -2417,6 +2714,10 @@ class EricApp {
     handleLogout() {
         if (!confirm('Voulez-vous vraiment vous déconnecter ?')) return;
 
+        if (this.state.isMonitoringMode) {
+            this.closeMonitoring();
+        }
+
         this.stopSpeaking();
         this.state.isLoggedIn = false;
         this.state.user = null;
@@ -2424,8 +2725,6 @@ class EricApp {
         this.state.bases = [];
         this.state.messages = [];
         this.state.indicators = [];
-        this.state.isPresentationMode = false;
-        document.getElementById('presentationMode').style.display = 'none';
 
         // Nettoyer les graphiques
         Object.keys(this.state.chartInstances).forEach(key => {
@@ -2435,6 +2734,7 @@ class EricApp {
 
         document.getElementById('loginInput').value = '';
         document.getElementById('passwordInput').value = '';
+        document.getElementById('monitoringScreen').style.display = 'none';
         this.showScreen('login');
     }
 
@@ -2448,18 +2748,15 @@ class EricApp {
 // ================================================================
 window.app = new EricApp();
 
-// Initialiser les fonctions globales pour les événements onclick
+// Fonctions globales pour les événements onclick
 window.executeIndicator = (ind) => window.app.executeIndicator(ind);
 window.deleteIndicator = (id, name) => window.app.deleteIndicator(id, name);
 window.openThresholdModal = (id, name) => window.app.openThresholdModal(id, name);
 window.removeAlert = (idx) => window.app.removeAlert(idx);
-window.retryMedia = (key) => window.app.retryMedia(key);
 window.openMediaModal = (uri, name, type) => window.app.openMediaModal(uri, name, type);
 window.openSaveIndicatorModal = (sql) => window.app.openSaveIndicatorModal(sql);
 window.toggleSql = (idx) => window.app.toggleSql(idx);
-window.setViewMode = (msgIdx, mode) => window.app.setViewMode(msgIdx, mode);
 window.openChartModal = (mode, idx) => window.app.openChartModal(mode, idx);
-window.closeChartModal = () => window.app.closeChartModal();
 </script>
 
 </body>
